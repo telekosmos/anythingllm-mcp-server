@@ -2,7 +2,7 @@ import { createReadStream } from 'node:fs';
 import { basename, isAbsolute } from 'node:path';
 
 function validateNonEmptyString(value, name) {
-  if (typeof value !== 'string' || value.length === 0) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
     throw new Error(`${name} is required and must be a non-empty string`);
   }
 }
@@ -13,7 +13,7 @@ async function uploadFileToWorkspace(client, slug, filePath, folderName) {
   if (!isAbsolute(filePath)) {
     throw new Error('filePath must be an absolute path');
   }
-  if (filePath.split('/').includes('..')) {
+  if (filePath.split(/[\\/]/).includes('..')) {
     throw new Error('filePath must not contain parent directory references');
   }
 

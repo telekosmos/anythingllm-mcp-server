@@ -54,7 +54,7 @@ describe('upload tools', () => {
       const embedBody = JSON.parse(requests[1].body.toString());
       expect(embedBody.adds).toEqual(['custom-documents/test.txt-uuid.json']);
     } finally {
-      server.close();
+      await new Promise(resolve => server.close(resolve));
       rmSync(tmpDir, { recursive: true, force: true });
     }
   });
@@ -116,7 +116,7 @@ describe('upload tools', () => {
       const embedBody = JSON.parse(requests[1].body.toString());
       expect(embedBody.adds).toEqual(['custom-documents/my-folder/test.txt-uuid.json']);
     } finally {
-      server.close();
+      await new Promise(resolve => server.close(resolve));
       rmSync(tmpDir, { recursive: true, force: true });
     }
   });
