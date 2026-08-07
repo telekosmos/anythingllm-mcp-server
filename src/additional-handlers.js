@@ -1,3 +1,6 @@
+import { createReadStream } from 'node:fs';
+import { basename } from 'node:path';
+
 export async function handleAdditionalTools(name, args, client) {
   let result;
   
@@ -95,6 +98,24 @@ export async function handleAdditionalTools(name, args, client) {
     case 'process_document_url':
       result = await client.processDocument(args.slug, args.url);
       break;
+
+    case 'upload_file': {
+      const fileStream = createReadStream(args.filePath);
+      result = await client.uploadDocument(args.slug, {
+        file: fileStream,
+        filename: basename(args.filePath)
+      });
+      break;
+    }
+
+    case 'upload_file_to_folder': {
+      const fileStream = createReadStream(args.filePath);
+      result = await client.uploadDocument(args.slug, {
+        file: fileStream,
+        filename: basename(args.filePath)
+      }, args.folderName);
+      break;
+    }
       
     case 'get_document_vectors':
       result = await client.getDocumentVectors(args.slug, args.documentId);
