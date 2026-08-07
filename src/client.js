@@ -1,6 +1,17 @@
 import fetch from 'node-fetch';
 import FormData from 'form-data';
 
+function safePathSegment(value) {
+  if (value === undefined || value === null) {
+    throw new Error('Path parameter is required');
+  }
+  const str = String(value);
+  if (str.length === 0) {
+    throw new Error('Path parameter must be non-empty');
+  }
+  return encodeURIComponent(str);
+}
+
 export class AnythingLLMClient {
   constructor(baseUrl, apiKey) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
@@ -34,7 +45,7 @@ export class AnythingLLMClient {
   }
 
   async getWorkspace(slug) {
-    return this.request(`/api/v1/workspace/${slug}`);
+    return this.request(`/api/v1/workspace/${safePathSegment(slug)}`);
   }
 
   async createWorkspace(name) {
@@ -45,14 +56,14 @@ export class AnythingLLMClient {
   }
 
   async updateWorkspace(slug, updates) {
-    return this.request(`/api/v1/workspace/${slug}/update`, {
+    return this.request(`/api/v1/workspace/${safePathSegment(slug)}/update`, {
       method: 'POST',
       body: JSON.stringify(updates)
     });
   }
 
   async deleteWorkspace(slug) {
-    const url = `${this.baseUrl}/api/v1/workspace/${slug}`;
+    const url = `${this.baseUrl}/api/v1/workspace/${safePathSegment(slug)}`;
     const response = await fetch(url, {
       method: 'DELETE',
       headers: this.headers
@@ -69,14 +80,14 @@ export class AnythingLLMClient {
   }
 
   async chatWithWorkspace(slug, message, mode = 'chat') {
-    return this.request(`/api/v1/workspace/${slug}/chat`, {
+    return this.request(`/api/v1/workspace/${safePathSegment(slug)}/chat`, {
       method: 'POST',
       body: JSON.stringify({ message, mode })
     });
   }
 
   async streamChatWithWorkspace(slug, message, mode = 'chat') {
-    const url = `${this.baseUrl}/api/v1/workspace/${slug}/stream-chat`;
+    const url = `${this.baseUrl}/api/v1/workspace/${safePathSegment(slug)}/stream-chat`;
     const response = await fetch(url, {
       method: 'POST',
       headers: this.headers,
@@ -128,7 +139,7 @@ export class AnythingLLMClient {
   async listDocuments(workspaceSlug) {
     if (workspaceSlug) {
       // Get workspace details which includes embedded documents
-      const workspace = await this.request(`/api/v1/workspace/${workspaceSlug}`);
+      const workspace = await this.request(`/api/v1/workspace/${safePathSegment(workspaceSlug)}`);
       // Note: workspace.workspace can be an array or object depending on API version
       const wsData = Array.isArray(workspace.workspace) ? workspace.workspace[0] : workspace.workspace;
       return { documents: wsData?.documents || [] };
@@ -140,6 +151,9 @@ export class AnythingLLMClient {
   // FIXED: Delete document from workspace
   // The documentName can be docId, filename, or full docpath
   async deleteDocument(workspaceSlug, documentName) {
+    if (documentName === undefined || documentName === null || String(documentName).length === 0) {
+      throw new Error('documentName is required and must be non-empty');
+    }
     const workspace = await this.getWorkspace(workspaceSlug);
     // Note: workspace.workspace can be an array or object depending on API version
     const wsData = Array.isArray(workspace.workspace) ? workspace.workspace[0] : workspace.workspace;
@@ -152,7 +166,7 @@ export class AnythingLLMClient {
       d.docpath?.includes(documentName)
     );
     if (matchedDoc) { docPath = matchedDoc.docpath; }
-    return this.request(`/api/v1/workspace/${workspaceSlug}/update-embeddings`, {
+    return this.request(`/api/v1/workspace/${safePathSegment(workspaceSlug)}/update-embeddings`, {
       method: 'POST',
       body: JSON.stringify({ deletes: [docPath] })
     });
@@ -160,7 +174,7 @@ export class AnythingLLMClient {
 
   // Helper: Add documents to workspace by their location paths
   async addDocumentsToWorkspace(workspaceSlug, documentPaths) {
-    return this.request(`/api/v1/workspace/${workspaceSlug}/update-embeddings`, {
+    return this.request(`/api/v1/workspace/${safePathSegment(workspaceSlug)}/update-embeddings`, {
       method: 'POST',
       body: JSON.stringify({
         adds: documentPaths
@@ -192,14 +206,14 @@ export class AnythingLLMClient {
   }
 
   async updateUser(userId, updates) {
-    return this.request(`/api/v1/admin/users/${userId}`, {
+    return this.request(`/api/v1/admin/users/${safePathSegment(userId)}`, {
       method: 'POST',
       body: JSON.stringify(updates)
     });
   }
 
   async deleteUser(userId) {
-    return this.request(`/api/v1/admin/users/${userId}`, {
+    return this.request(`/api/v1/admin/users/${safePathSegment(userId)}`, {
       method: 'DELETE'
     });
   }
@@ -216,7 +230,7 @@ export class AnythingLLMClient {
   }
 
   async deleteApiKey(keyId) {
-    return this.request(`/api/v1/admin/delete-api-key/${keyId}`, {
+    return this.request(`/api/v1/admin/delete-api-key/${safePathSegment(keyId)}`, {
       method: 'DELETE'
     });
   }
@@ -277,7 +291,7 @@ export class AnythingLLMClient {
 
   // Chat History
   async getWorkspaceChatHistory(workspaceSlug, limit = 100) {
-    return this.request(`/api/v1/workspace/${workspaceSlug}/chats`);
+    return this.request(`/api/v1/workspace/${safePathSegment(workspaceSlug)}/chats`);
   }
 
   // NOTE: AnythingLLM API v1 does not have endpoint to clear chat history
@@ -331,11 +345,11 @@ export class AnythingLLMClient {
 
   // Workspace Settings - get workspace details
   async getWorkspaceSettings(workspaceSlug) {
-    return this.request(`/api/v1/workspace/${workspaceSlug}`);
+    return this.request(`/api/v1/workspace/${safePathSegment(workspaceSlug)}`);
   }
 
   async updateWorkspaceSettings(workspaceSlug, settings) {
-    return this.request(`/api/v1/workspace/${workspaceSlug}/update`, {
+    return this.request(`/api/v1/workspace/${safePathSegment(workspaceSlug)}/update`, {
       method: 'POST',
       body: JSON.stringify(settings)
     });
@@ -350,7 +364,7 @@ export class AnythingLLMClient {
   async getDocumentVectors(workspaceSlug, documentId) {
     // AnythingLLM doesn't expose individual document vectors directly
     // Use vector search as a workaround
-    return this.request(`/api/v1/workspace/${workspaceSlug}/vector-search`, {
+    return this.request(`/api/v1/workspace/${safePathSegment(workspaceSlug)}/vector-search`, {
       method: 'POST',
       body: JSON.stringify({
         query: '',
@@ -361,7 +375,7 @@ export class AnythingLLMClient {
 
   // Search - use vector search endpoint
   async searchWorkspace(workspaceSlug, query, limit = 10) {
-    return this.request(`/api/v1/workspace/${workspaceSlug}/vector-search`, {
+    return this.request(`/api/v1/workspace/${safePathSegment(workspaceSlug)}/vector-search`, {
       method: 'POST',
       body: JSON.stringify({
         query: query,
@@ -386,7 +400,7 @@ export class AnythingLLMClient {
     if (!agentData.workspaceSlug) {
       throw new Error('workspaceSlug is required to create an agent');
     }
-    return this.request(`/api/v1/workspace/${agentData.workspaceSlug}/update`, {
+    return this.request(`/api/v1/workspace/${safePathSegment(agentData.workspaceSlug)}/update`, {
       method: 'POST',
       body: JSON.stringify({
         agentProvider: agentData.provider || 'none',
@@ -398,7 +412,7 @@ export class AnythingLLMClient {
 
   async updateAgent(agentId, updates) {
     // agentId should be the workspace slug
-    return this.request(`/api/v1/workspace/${agentId}/update`, {
+    return this.request(`/api/v1/workspace/${safePathSegment(agentId)}/update`, {
       method: 'POST',
       body: JSON.stringify(updates)
     });
@@ -406,7 +420,7 @@ export class AnythingLLMClient {
 
   async deleteAgent(agentId) {
     // Disable agent on workspace
-    return this.request(`/api/v1/workspace/${agentId}/update`, {
+    return this.request(`/api/v1/workspace/${safePathSegment(agentId)}/update`, {
       method: 'POST',
       body: JSON.stringify({ agentProvider: 'none' })
     });
@@ -414,7 +428,7 @@ export class AnythingLLMClient {
 
   async invokeAgent(agentId, input) {
     // Use chat with agent mode
-    return this.request(`/api/v1/workspace/${agentId}/chat`, {
+    return this.request(`/api/v1/workspace/${safePathSegment(agentId)}/chat`, {
       method: 'POST',
       body: JSON.stringify({
         message: input,
