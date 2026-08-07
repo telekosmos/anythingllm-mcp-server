@@ -49,10 +49,10 @@ Before any operation, you MUST initialize the client:
 
 ```
 mcp__anythingllm__initialize_anythingllm
-  apiKey: "YOUR-API-KEY"
+  apiKey: "YOUR-API-KEY"  # Optional if ANYTHINGLLM_API_KEY is set in the environment
 ```
 
-**Note:** Do not pass a `baseUrl` argument. The backend URL is configured by the host via the `ANYTHINGLLM_BASE_URL` environment variable. If the environment variables are set, initialization may happen automatically.
+**Note:** Do not pass a `baseUrl` argument. The backend URL is configured by the host via the `ANYTHINGLLM_BASE_URL` environment variable. If `ANYTHINGLLM_API_KEY` is set in the environment, the server initializes automatically and this tool can be skipped or called without arguments.
 
 ### Core Workflow: RAG (Retrieval-Augmented Generation)
 
