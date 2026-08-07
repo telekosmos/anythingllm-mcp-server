@@ -206,11 +206,11 @@ Replace the existing `uploadDocument` method with this implementation:
   }
 ```
 
-- [ ] **Step 2: Run the test to confirm the folder endpoint is used**
+- [ ] **Step 2: Run the test to confirm the client endpoint is correct**
 
 Run: `npm test`
 
-Expected: FAIL — the tool registration test still fails because the tools are not yet registered. The folder endpoint test should now pass if the client change is correct.
+Expected: FAIL — all three tests still fail because the tools are not registered and the handler is unimplemented. The client-side endpoint logic is correct; the tests will pass once the handler is wired in Task 4.
 
 ---
 
