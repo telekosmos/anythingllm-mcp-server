@@ -4,24 +4,47 @@
 
 **Goal:** Add two MCP tools, `upload_file` and `upload_file_to_folder`, that let an agent upload a local file into an AnythingLLM workspace using the existing two-step upload + `update-embeddings` pattern.
 
-**Architecture:** Extend `AnythingLLMClient.uploadDocument` to support an optional folder path. Register the new tools in `additional-tools.js` and route them in `additional-handlers.js` by reading the local file as a stream and delegating to the client. Verify with a small Node.js built-in test using a local HTTP server.
+**Architecture:** Extend `AnythingLLMClient.uploadDocument` to support an optional folder path. Register the new tools in `additional-tools.js` and route them in `additional-handlers.js` by reading the local file as a stream and delegating to the client. Verify with a small Vitest test using a local HTTP server.
 
-**Tech Stack:** Node.js 18+, `node-fetch`, `form-data`, `node:test` / `node:assert`.
+**Tech Stack:** Node.js 18+, `node-fetch`, `form-data`, `vitest`.
 
 ---
 
-## Task 1: Write the failing test
+## Task 1: Add Vitest and write the failing test
 
 **Files:**
+- Modify: `package.json`
 - Create: `tests/upload-tools.test.js`
 
-Add a test file that verifies the new tools are registered, the handler routes to `uploadDocument`, and the client hits the correct upload endpoint and the correct `update-embeddings` endpoint.
+Add Vitest as a dev dependency and a `test` script, then create a minimal test file that verifies the new tools are registered, the handler routes to `uploadDocument`, and the client hits the correct upload and `update-embeddings` endpoints.
 
-- [ ] **Step 1: Create the test file**
+- [ ] **Step 1: Add Vitest to `package.json`**
+
+Update the `scripts` and add a `devDependencies` section:
+
+```json
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "vitest run",
+    "release": "./scripts/publish.sh",
+    "release:quick": "./scripts/quick-publish.sh"
+  },
+```
+
+```json
+  "devDependencies": {
+    "vitest": "^2.0.0"
+  }
+```
+
+Run: `npm install`
+
+Expected: `node_modules/.bin/vitest` is created and `package-lock.json` is updated.
+
+- [ ] **Step 2: Create the test file**
 
 ```javascript
-import { test, describe } from 'node:test';
-import assert from 'node:assert';
+import { describe, it, expect } from 'vitest';
 import { createServer } from 'node:http';
 import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -31,23 +54,19 @@ import { AnythingLLMClient } from '../src/client.js';
 import { additionalTools } from '../src/additional-tools.js';
 
 describe('upload tools', () => {
-  test('upload_file and upload_file_to_folder are registered', () => {
+  it('registers upload_file and upload_file_to_folder', () => {
     const names = additionalTools.map(t => t.name);
-    assert(names.includes('upload_file'), 'upload_file should be registered');
-    assert(names.includes('upload_file_to_folder'), 'upload_file_to_folder should be registered');
+    expect(names).toContain('upload_file');
+    expect(names).toContain('upload_file_to_folder');
   });
 
-  test('upload_file uploads to /api/v1/document/upload and embeds into workspace', async () => {
+  it('upload_file uploads to /api/v1/document/upload and embeds into workspace', async () => {
     const requests = [];
     const server = createServer((req, res) => {
       const chunks = [];
       req.on('data', chunk => chunks.push(chunk));
       req.on('end', () => {
-        requests.push({
-          url: req.url,
-          method: req.method,
-          body: Buffer.concat(chunks)
-        });
+        requests.push({ url: req.url, method: req.method, body: Buffer.concat(chunks) });
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           success: true,
@@ -71,26 +90,25 @@ describe('upload tools', () => {
         filePath
       }, client);
 
-      assert.strictEqual(result.success, true);
-      assert.strictEqual(requests.length, 2);
-      assert.strictEqual(requests[0].url, '/api/v1/document/upload');
-      assert.strictEqual(requests[0].method, 'POST');
-      assert.strictEqual(requests[1].url, '/api/v1/workspace/my-workspace/update-embeddings');
-      assert.strictEqual(requests[1].method, 'POST');
+      expect(result.success).toBe(true);
+      expect(requests).toHaveLength(2);
+      expect(requests[0].url).toBe('/api/v1/document/upload');
+      expect(requests[0].method).toBe('POST');
+      expect(requests[1].url).toBe('/api/v1/workspace/my-workspace/update-embeddings');
+      expect(requests[1].method).toBe('POST');
 
       const embedBody = JSON.parse(requests[1].body.toString());
-      assert.deepStrictEqual(embedBody.adds, ['custom-documents/test.txt-uuid.json']);
+      expect(embedBody.adds).toEqual(['custom-documents/test.txt-uuid.json']);
     } finally {
       server.close();
       rmSync(tmpDir, { recursive: true, force: true });
     }
   });
 
-  test('upload_file_to_folder uploads to /api/v1/document/upload/{folderName}', async () => {
+  it('upload_file_to_folder uploads to /api/v1/document/upload/{folderName}', async () => {
     const requests = [];
     const server = createServer((req, res) => {
-      const chunks = [];
-      req.on('data', chunk => chunks.push(chunk));
+      req.on('data', () => {});
       req.on('end', () => {
         requests.push({ url: req.url, method: req.method });
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -117,11 +135,11 @@ describe('upload tools', () => {
         filePath
       }, client);
 
-      assert.strictEqual(result.success, true);
-      assert.strictEqual(requests.length, 2);
-      assert.strictEqual(requests[0].url, '/api/v1/document/upload/my-folder');
-      assert.strictEqual(requests[0].method, 'POST');
-      assert.strictEqual(requests[1].url, '/api/v1/workspace/my-workspace/update-embeddings');
+      expect(result.success).toBe(true);
+      expect(requests).toHaveLength(2);
+      expect(requests[0].url).toBe('/api/v1/document/upload/my-folder');
+      expect(requests[0].method).toBe('POST');
+      expect(requests[1].url).toBe('/api/v1/workspace/my-workspace/update-embeddings');
     } finally {
       server.close();
       rmSync(tmpDir, { recursive: true, force: true });
@@ -130,13 +148,13 @@ describe('upload tools', () => {
 });
 ```
 
-- [ ] **Step 2: Ensure the tests directory exists**
+- [ ] **Step 3: Ensure the tests directory exists**
 
 Run: `mkdir -p tests`
 
-- [ ] **Step 3: Run the test to confirm it fails**
+- [ ] **Step 4: Run the test to confirm it fails**
 
-Run: `node --test tests/upload-tools.test.js`
+Run: `npm test`
 
 Expected: FAIL — `upload_file` and `upload_file_to_folder` are not registered, and the handler returns `null` for both tools.
 
@@ -190,7 +208,7 @@ Replace the existing `uploadDocument` method with this implementation:
 
 - [ ] **Step 2: Run the test to confirm the folder endpoint is used**
 
-Run: `node --test tests/upload-tools.test.js`
+Run: `npm test`
 
 Expected: FAIL — the tool registration test still fails because the tools are not yet registered. The folder endpoint test should now pass if the client change is correct.
 
@@ -276,7 +294,7 @@ Replace the Document Processing section starting at line 292 with the following 
 
 - [ ] **Step 2: Run the test to confirm registration passes**
 
-Run: `node --test tests/upload-tools.test.js`
+Run: `npm test`
 
 Expected: FAIL — the handler still returns `null` for the new tools, so the handler tests fail. The registration test should pass.
 
@@ -332,7 +350,7 @@ Replace the Document Processing switch block:
 
 - [ ] **Step 3: Run the full test suite**
 
-Run: `node --test tests/upload-tools.test.js`
+Run: `npm test`
 
 Expected: PASS — all three tests should pass.
 
@@ -348,14 +366,14 @@ Expected: No output (Node.js exits 0 for each file).
 
 - [ ] **Step 2: Run the tests one final time**
 
-Run: `node --test tests/upload-tools.test.js`
+Run: `npm test`
 
 Expected: PASS.
 
 - [ ] **Step 3: Commit the changes**
 
 ```bash
-git add src/client.js src/additional-tools.js src/additional-handlers.js tests/upload-tools.test.js
+git add package.json package-lock.json src/client.js src/additional-tools.js src/additional-handlers.js tests/upload-tools.test.js
 git commit -m "feat: expose upload_file and upload_file_to_folder tools"
 ```
 
@@ -370,6 +388,8 @@ git commit -m "feat: expose upload_file and upload_file_to_folder tools"
 - Existing two-step upload + `update-embeddings` pattern kept? Yes — Task 2 reuses `uploadDocument`/`addDocumentsToWorkspace`.
 - `folderName` encoded via `safePathSegment`? Yes — Task 2.
 - Tools live in `additional-tools.js`? Yes — Task 3.
+- Vitest added as dev dependency with a test script? Yes — Task 1.
+- Minimal test coverage (don't overtest)? Yes — three focused tests only.
 
 **Placeholder scan:**
 - No TBD, TODO, or vague steps. Every code snippet is complete and every command is exact.
