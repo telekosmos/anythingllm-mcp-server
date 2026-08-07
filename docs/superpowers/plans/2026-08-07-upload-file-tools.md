@@ -100,7 +100,7 @@ describe('upload tools', () => {
       const embedBody = JSON.parse(requests[1].body.toString());
       expect(embedBody.adds).toEqual(['custom-documents/test.txt-uuid.json']);
     } finally {
-      server.close();
+      await new Promise(resolve => server.close(resolve));
       rmSync(tmpDir, { recursive: true, force: true });
     }
   });
@@ -162,7 +162,7 @@ describe('upload tools', () => {
       const embedBody = JSON.parse(requests[1].body.toString());
       expect(embedBody.adds).toEqual(['custom-documents/my-folder/test.txt-uuid.json']);
     } finally {
-      server.close();
+      await new Promise(resolve => server.close(resolve));
       rmSync(tmpDir, { recursive: true, force: true });
     }
   });
@@ -342,7 +342,7 @@ Insert the helper before `handleAdditionalTools` and update the Document Process
 
 ```javascript
 function validateNonEmptyString(value, name) {
-  if (typeof value !== 'string' || value.length === 0) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
     throw new Error(`${name} is required and must be a non-empty string`);
   }
 }
@@ -353,7 +353,7 @@ async function uploadFileToWorkspace(client, slug, filePath, folderName) {
   if (!isAbsolute(filePath)) {
     throw new Error('filePath must be an absolute path');
   }
-  if (filePath.split('/').includes('..')) {
+  if (filePath.split(/[\\/]/).includes('..')) {
     throw new Error('filePath must not contain parent directory references');
   }
 
