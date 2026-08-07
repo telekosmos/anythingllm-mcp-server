@@ -39,7 +39,7 @@ Update the `scripts` and add a `devDependencies` section:
 
 Run: `npm install`
 
-Expected: `node_modules/.bin/vitest` is created and `package-lock.json` is updated.
+Expected: `node_modules/.bin/vitest` is created. Note: the project `.gitignore` ignores `package-lock.json`, so the lock file is not tracked. Only `package.json` changes are committed.
 
 - [ ] **Step 2: Create the test file**
 
@@ -373,7 +373,7 @@ Expected: PASS.
 - [ ] **Step 3: Commit the changes**
 
 ```bash
-git add package.json package-lock.json src/client.js src/additional-tools.js src/additional-handlers.js tests/upload-tools.test.js
+git add package.json src/client.js src/additional-tools.js src/additional-handlers.js tests/upload-tools.test.js
 git commit -m "feat: expose upload_file and upload_file_to_folder tools"
 ```
 
