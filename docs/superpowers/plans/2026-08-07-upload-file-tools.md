@@ -105,12 +105,29 @@ describe('upload tools', () => {
     }
   });
 
+  it('rejects invalid upload inputs', async () => {
+    const client = new AnythingLLMClient('http://localhost:3001', 'test-key');
+
+    await expect(handleAdditionalTools('upload_file', { slug: 'ws', filePath: '' }, client))
+      .rejects.toThrow('filePath is required and must be a non-empty string');
+
+    await expect(handleAdditionalTools('upload_file', { slug: 'ws', filePath: 'relative/path.txt' }, client))
+      .rejects.toThrow('filePath must be an absolute path');
+
+    await expect(handleAdditionalTools('upload_file', { slug: 'ws', filePath: '/tmp/../etc/passwd' }, client))
+      .rejects.toThrow('filePath must not contain parent directory references');
+
+    await expect(handleAdditionalTools('upload_file_to_folder', { slug: 'ws', filePath: '/tmp/test.txt' }, client))
+      .rejects.toThrow('folderName is required and must be a non-empty string');
+  });
+
   it('upload_file_to_folder uploads to /api/v1/document/upload/{folderName}', async () => {
     const requests = [];
     const server = createServer((req, res) => {
-      req.on('data', () => {});
+      const chunks = [];
+      req.on('data', chunk => chunks.push(chunk));
       req.on('end', () => {
-        requests.push({ url: req.url, method: req.method });
+        requests.push({ url: req.url, method: req.method, body: Buffer.concat(chunks) });
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           success: true,
@@ -140,6 +157,10 @@ describe('upload tools', () => {
       expect(requests[0].url).toBe('/api/v1/document/upload/my-folder');
       expect(requests[0].method).toBe('POST');
       expect(requests[1].url).toBe('/api/v1/workspace/my-workspace/update-embeddings');
+      expect(requests[1].method).toBe('POST');
+
+      const embedBody = JSON.parse(requests[1].body.toString());
+      expect(embedBody.adds).toEqual(['custom-documents/my-folder/test.txt-uuid.json']);
     } finally {
       server.close();
       rmSync(tmpDir, { recursive: true, force: true });
@@ -306,42 +327,63 @@ Expected: FAIL — the handler still returns `null` for the new tools, so the ha
 - Modify: `src/additional-handlers.js:1` (add imports)
 - Modify: `src/additional-handlers.js:94-102` (Document Processing cases)
 
-Add the necessary imports and two new switch cases that read the local file as a stream and call `client.uploadDocument`.
+Add the necessary imports, a small helper that validates inputs, creates a file stream, and ensures the stream is destroyed after the upload. Then add two new switch cases that delegate to the helper.
 
 - [ ] **Step 1: Add imports at the top of the file**
 
 ```javascript
 import { createReadStream } from 'node:fs';
-import { basename } from 'node:path';
+import { basename, isAbsolute } from 'node:path';
 ```
 
-- [ ] **Step 2: Add handler cases after `process_document_url`**
+- [ ] **Step 2: Add a helper function and the two new switch cases**
 
-Replace the Document Processing switch block:
+Insert the helper before `handleAdditionalTools` and update the Document Processing switch block:
 
 ```javascript
+function validateNonEmptyString(value, name) {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new Error(`${name} is required and must be a non-empty string`);
+  }
+}
+
+async function uploadFileToWorkspace(client, slug, filePath, folderName) {
+  validateNonEmptyString(slug, 'slug');
+  validateNonEmptyString(filePath, 'filePath');
+  if (!isAbsolute(filePath)) {
+    throw new Error('filePath must be an absolute path');
+  }
+  if (filePath.split('/').includes('..')) {
+    throw new Error('filePath must not contain parent directory references');
+  }
+
+  let fileStream;
+  try {
+    fileStream = createReadStream(filePath);
+    return await client.uploadDocument(slug, {
+      file: fileStream,
+      filename: basename(filePath)
+    }, folderName);
+  } finally {
+    fileStream?.destroy();
+  }
+}
+
+export async function handleAdditionalTools(name, args, client) {
+  ...
     // Document Processing
     case 'process_document_url':
       result = await client.processDocument(args.slug, args.url);
       break;
 
-    case 'upload_file': {
-      const fileStream = createReadStream(args.filePath);
-      result = await client.uploadDocument(args.slug, {
-        file: fileStream,
-        filename: basename(args.filePath)
-      });
+    case 'upload_file':
+      result = await uploadFileToWorkspace(client, args.slug, args.filePath);
       break;
-    }
 
-    case 'upload_file_to_folder': {
-      const fileStream = createReadStream(args.filePath);
-      result = await client.uploadDocument(args.slug, {
-        file: fileStream,
-        filename: basename(args.filePath)
-      }, args.folderName);
+    case 'upload_file_to_folder':
+      validateNonEmptyString(args.folderName, 'folderName');
+      result = await uploadFileToWorkspace(client, args.slug, args.filePath, args.folderName);
       break;
-    }
 
     case 'get_document_vectors':
       result = await client.getDocumentVectors(args.slug, args.documentId);
@@ -352,7 +394,7 @@ Replace the Document Processing switch block:
 
 Run: `npm test`
 
-Expected: PASS — all three tests should pass.
+Expected: PASS — all four tests should pass.
 
 ---
 
@@ -373,7 +415,7 @@ Expected: PASS.
 - [ ] **Step 3: Commit the changes**
 
 ```bash
-git add package.json src/client.js src/additional-tools.js src/additional-handlers.js tests/upload-tools.test.js
+git add package.json src/client.js src/additional-tools.js src/additional-handlers.js tests/upload-tools.test.js README.md
 git commit -m "feat: expose upload_file and upload_file_to_folder tools"
 ```
 
@@ -389,7 +431,10 @@ git commit -m "feat: expose upload_file and upload_file_to_folder tools"
 - `folderName` encoded via `safePathSegment`? Yes — Task 2.
 - Tools live in `additional-tools.js`? Yes — Task 3.
 - Vitest added as dev dependency with a test script? Yes — Task 1.
-- Minimal test coverage (don't overtest)? Yes — three focused tests only.
+- Minimal test coverage (don't overtest)? Yes — four focused tests only.
+- Input validation for `slug`, `filePath`, and `folderName`? Yes — Task 4.
+- `filePath` restricted to absolute paths without parent-directory references? Yes — Task 4.
+- README updated with new tools and security note? Yes — Task 5.
 
 **Placeholder scan:**
 - No TBD, TODO, or vague steps. Every code snippet is complete and every command is exact.

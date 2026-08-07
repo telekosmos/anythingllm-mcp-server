@@ -13,11 +13,8 @@ async function uploadFileToWorkspace(client, slug, filePath, folderName) {
   if (!isAbsolute(filePath)) {
     throw new Error('filePath must be an absolute path');
   }
-  if (filePath.includes('..')) {
+  if (filePath.split('/').includes('..')) {
     throw new Error('filePath must not contain parent directory references');
-  }
-  if (folderName !== undefined) {
-    validateNonEmptyString(folderName, 'folderName');
   }
 
   let fileStream;
