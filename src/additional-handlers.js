@@ -1,9 +1,17 @@
 import { createReadStream } from 'node:fs';
 import { basename } from 'node:path';
 
+function validateNonEmptyString(value, name) {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new Error(`${name} is required and must be a non-empty string`);
+  }
+}
+
 async function uploadFileToWorkspace(client, slug, filePath, folderName) {
-  if (typeof filePath !== 'string' || filePath.length === 0) {
-    throw new Error('filePath is required and must be a non-empty string');
+  validateNonEmptyString(slug, 'slug');
+  validateNonEmptyString(filePath, 'filePath');
+  if (folderName !== undefined) {
+    validateNonEmptyString(folderName, 'folderName');
   }
 
   let fileStream;

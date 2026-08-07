@@ -62,9 +62,10 @@ describe('upload tools', () => {
   it('upload_file_to_folder uploads to /api/v1/document/upload/{folderName}', async () => {
     const requests = [];
     const server = createServer((req, res) => {
-      req.on('data', () => {});
+      const chunks = [];
+      req.on('data', chunk => chunks.push(chunk));
       req.on('end', () => {
-        requests.push({ url: req.url, method: req.method });
+        requests.push({ url: req.url, method: req.method, body: Buffer.concat(chunks) });
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           success: true,
@@ -94,6 +95,10 @@ describe('upload tools', () => {
       expect(requests[0].url).toBe('/api/v1/document/upload/my-folder');
       expect(requests[0].method).toBe('POST');
       expect(requests[1].url).toBe('/api/v1/workspace/my-workspace/update-embeddings');
+      expect(requests[1].method).toBe('POST');
+
+      const embedBody = JSON.parse(requests[1].body.toString());
+      expect(embedBody.adds).toEqual(['custom-documents/my-folder/test.txt-uuid.json']);
     } finally {
       server.close();
       rmSync(tmpDir, { recursive: true, force: true });
