@@ -50,10 +50,9 @@ Before any operation, you MUST initialize the client:
 ```
 mcp__anythingllm__initialize_anythingllm
   apiKey: "YOUR-API-KEY"
-  baseUrl: "http://localhost:3001"
 ```
 
-If env variables are set, initialization happens automatically.
+**Note:** Do not pass a `baseUrl` argument. The backend URL is configured by the host via the `ANYTHINGLLM_BASE_URL` environment variable. If the environment variables are set, initialization may happen automatically.
 
 ### Core Workflow: RAG (Retrieval-Augmented Generation)
 
@@ -82,7 +81,7 @@ mcp__anythingllm__chat_with_workspace
 
 | Tool | Purpose | Key Parameters |
 |------|---------|----------------|
-| `initialize_anythingllm` | **REQUIRED FIRST** | `apiKey`, `baseUrl` |
+| `initialize_anythingllm` | **REQUIRED FIRST** | `apiKey` |
 | `list_workspaces` | List all workspaces | - |
 | `get_workspace` | Get workspace details + documents | `slug` |
 | `create_workspace` | Create new workspace | `name` |
@@ -131,10 +130,11 @@ create_workspace(name="old-workspace")  # Fresh start
 ### Important Notes for LLMs
 
 1. **Always initialize first** - Every new session needs `initialize_anythingllm`
-2. **Use `mode: "query"` for RAG** - This retrieves relevant documents. `mode: "chat"` doesn't use RAG.
-3. **`list_documents` returns docId** - Use this UUID for `delete_document`
-4. **No clear chat history API** - Workaround: delete and recreate workspace
-5. **Slugs are auto-generated** - When you create "My Workspace", slug becomes "my-workspace"
+2. **Only pass `apiKey` to `initialize_anythingllm`** - The `baseUrl` is set by the host environment (`ANYTHINGLLM_BASE_URL`) and is not a tool argument
+3. **Use `mode: "query"` for RAG** - This retrieves relevant documents. `mode: "chat"` doesn't use RAG.
+4. **`list_documents` returns docId** - Use this UUID for `delete_document`
+5. **No clear chat history API** - Workaround: delete and recreate workspace
+6. **Slugs are auto-generated** - When you create "My Workspace", slug becomes "my-workspace"
 
 ---
 
@@ -149,6 +149,15 @@ create_workspace(name="old-workspace")  # Fresh start
 | Multiple endpoints | Wrong paths | Correct AnythingLLM v1 API paths |
 
 See [Issue #1](https://github.com/raqueljezweb/anythingllm-mcp-server/issues/1) on original repo.
+
+---
+
+## Security Hardening in This Fork
+
+These changes protect the server from prompt-injection and malicious tool arguments:
+
+- **Backend URL is environment-only** — `initialize_anythingllm` no longer accepts a `baseUrl` argument. The server only connects to the URL configured in `ANYTHINGLLM_BASE_URL` at startup, preventing attackers from redirecting API calls (and the API key) to arbitrary servers.
+- **Path parameters are encoded** — All `slug`, `userId`, `documentId`, `keyId`, and `agentId` values are URL-encoded before being inserted into API paths, blocking path-traversal attacks like `slug="../admin/users"`.
 
 ---
 
