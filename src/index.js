@@ -48,6 +48,13 @@ let config = {
   baseUrl: configuredBaseUrl
 };
 
+// Auto-initialize if the API key is provided via environment.
+// This lets the server work immediately without requiring the
+// initialize_anythingllm tool call for every new session.
+if (config.apiKey) {
+  client = new AnythingLLMClient(config.baseUrl, config.apiKey);
+}
+
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
@@ -59,10 +66,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             apiKey: {
               type: 'string',
-              description: 'Your AnythingLLM API key'
+              description: 'Your AnythingLLM API key (optional if ANYTHINGLLM_API_KEY env var is set)'
             }
           },
-          required: ['apiKey']
+          required: []
         }
       },
       {
@@ -223,17 +230,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     let result;
     
     switch (name) {
-      case 'initialize_anythingllm':
-        if (!args.apiKey || typeof args.apiKey !== 'string') {
-          throw new Error('apiKey is required and must be a string');
+      case 'initialize_anythingllm': {
+        const apiKey = args.apiKey || config.apiKey;
+        if (!apiKey || typeof apiKey !== 'string') {
+          throw new Error('apiKey is required; set ANYTHINGLLM_API_KEY or pass it to initialize_anythingllm');
         }
-        config.apiKey = args.apiKey;
+        config.apiKey = apiKey;
         client = new AnythingLLMClient(config.baseUrl, config.apiKey);
         result = { 
           message: 'AnythingLLM client initialized successfully',
           baseUrl: config.baseUrl 
         };
         break;
+      }
         
       case 'list_workspaces':
         if (!client) {
