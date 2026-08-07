@@ -1,6 +1,22 @@
 import { createReadStream } from 'node:fs';
 import { basename } from 'node:path';
 
+async function uploadFileToWorkspace(client, slug, filePath, folderName) {
+  if (typeof filePath !== 'string' || filePath.length === 0) {
+    throw new Error('filePath is required and must be a non-empty string');
+  }
+
+  const fileStream = createReadStream(filePath);
+  try {
+    return await client.uploadDocument(slug, {
+      file: fileStream,
+      filename: basename(filePath)
+    }, folderName);
+  } finally {
+    fileStream.destroy();
+  }
+}
+
 export async function handleAdditionalTools(name, args, client) {
   let result;
   
@@ -99,23 +115,13 @@ export async function handleAdditionalTools(name, args, client) {
       result = await client.processDocument(args.slug, args.url);
       break;
 
-    case 'upload_file': {
-      const fileStream = createReadStream(args.filePath);
-      result = await client.uploadDocument(args.slug, {
-        file: fileStream,
-        filename: basename(args.filePath)
-      });
+    case 'upload_file':
+      result = await uploadFileToWorkspace(client, args.slug, args.filePath);
       break;
-    }
 
-    case 'upload_file_to_folder': {
-      const fileStream = createReadStream(args.filePath);
-      result = await client.uploadDocument(args.slug, {
-        file: fileStream,
-        filename: basename(args.filePath)
-      }, args.folderName);
+    case 'upload_file_to_folder':
+      result = await uploadFileToWorkspace(client, args.slug, args.filePath, args.folderName);
       break;
-    }
       
     case 'get_document_vectors':
       result = await client.getDocumentVectors(args.slug, args.documentId);
