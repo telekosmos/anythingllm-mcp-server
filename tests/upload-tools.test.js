@@ -59,6 +59,22 @@ describe('upload tools', () => {
     }
   });
 
+  it('rejects invalid upload inputs', async () => {
+    const client = new AnythingLLMClient('http://localhost:3001', 'test-key');
+
+    await expect(handleAdditionalTools('upload_file', { slug: 'ws', filePath: '' }, client))
+      .rejects.toThrow('filePath is required and must be a non-empty string');
+
+    await expect(handleAdditionalTools('upload_file', { slug: 'ws', filePath: 'relative/path.txt' }, client))
+      .rejects.toThrow('filePath must be an absolute path');
+
+    await expect(handleAdditionalTools('upload_file', { slug: 'ws', filePath: '/tmp/../etc/passwd' }, client))
+      .rejects.toThrow('filePath must not contain parent directory references');
+
+    await expect(handleAdditionalTools('upload_file_to_folder', { slug: 'ws', filePath: '/tmp/test.txt' }, client))
+      .rejects.toThrow('folderName is required and must be a non-empty string');
+  });
+
   it('upload_file_to_folder uploads to /api/v1/document/upload/{folderName}', async () => {
     const requests = [];
     const server = createServer((req, res) => {

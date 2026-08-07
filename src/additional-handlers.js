@@ -1,5 +1,5 @@
 import { createReadStream } from 'node:fs';
-import { basename } from 'node:path';
+import { basename, isAbsolute } from 'node:path';
 
 function validateNonEmptyString(value, name) {
   if (typeof value !== 'string' || value.length === 0) {
@@ -10,6 +10,12 @@ function validateNonEmptyString(value, name) {
 async function uploadFileToWorkspace(client, slug, filePath, folderName) {
   validateNonEmptyString(slug, 'slug');
   validateNonEmptyString(filePath, 'filePath');
+  if (!isAbsolute(filePath)) {
+    throw new Error('filePath must be an absolute path');
+  }
+  if (filePath.includes('..')) {
+    throw new Error('filePath must not contain parent directory references');
+  }
   if (folderName !== undefined) {
     validateNonEmptyString(folderName, 'folderName');
   }
@@ -129,6 +135,7 @@ export async function handleAdditionalTools(name, args, client) {
       break;
 
     case 'upload_file_to_folder':
+      validateNonEmptyString(args.folderName, 'folderName');
       result = await uploadFileToWorkspace(client, args.slug, args.filePath, args.folderName);
       break;
       
