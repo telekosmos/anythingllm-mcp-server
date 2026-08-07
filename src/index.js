@@ -24,10 +24,28 @@ const server = new Server(
   }
 );
 
+function validateBaseUrl(urlString) {
+  try {
+    const url = new URL(urlString);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error('baseUrl must use http or https');
+    }
+    if (url.username || url.password) {
+      throw new Error('baseUrl must not contain credentials');
+    }
+    return urlString.replace(/\/$/, '');
+  } catch (error) {
+    throw new Error(`Invalid ANYTHINGLLM_BASE_URL "${urlString}": ${error.message}`);
+  }
+}
+
+const DEFAULT_BASE_URL = 'http://localhost:3001';
+const configuredBaseUrl = validateBaseUrl(process.env.ANYTHINGLLM_BASE_URL || DEFAULT_BASE_URL);
+
 let client = null;
 let config = {
   apiKey: process.env.ANYTHINGLLM_API_KEY || null,
-  baseUrl: process.env.ANYTHINGLLM_BASE_URL || 'http://localhost:3001'
+  baseUrl: configuredBaseUrl
 };
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -42,10 +60,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             apiKey: {
               type: 'string',
               description: 'Your AnythingLLM API key'
-            },
-            baseUrl: {
-              type: 'string',
-              description: 'AnythingLLM base URL (default: http://localhost:3001)'
             }
           },
           required: ['apiKey']
@@ -210,10 +224,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     
     switch (name) {
       case 'initialize_anythingllm':
-        config.apiKey = args.apiKey;
-        if (args.baseUrl) {
-          config.baseUrl = args.baseUrl;
+        if (!args.apiKey || typeof args.apiKey !== 'string') {
+          throw new Error('apiKey is required and must be a string');
         }
+        config.apiKey = args.apiKey;
         client = new AnythingLLMClient(config.baseUrl, config.apiKey);
         result = { 
           message: 'AnythingLLM client initialized successfully',
