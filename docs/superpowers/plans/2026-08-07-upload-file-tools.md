@@ -6,7 +6,7 @@
 
 **Architecture:** Extend `AnythingLLMClient.uploadDocument` to support an optional folder path. Register the new tools in `additional-tools.js` and route them in `additional-handlers.js` by reading the local file as a stream and delegating to the client. Verify with a small Vitest test using a local HTTP server.
 
-**Tech Stack:** Node.js 18+, `node-fetch`, `form-data`, `vitest`.
+**Tech Stack:** Node.js 18+, `node-fetch`, `form-data`, `vitest` (latest stable).
 
 ---
 
@@ -33,7 +33,7 @@ Update the `scripts` and add a `devDependencies` section:
 
 ```json
   "devDependencies": {
-    "vitest": "^2.0.0"
+    "vitest": "^4.1.10"
   }
 ```
 
