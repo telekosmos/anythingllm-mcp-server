@@ -1,3 +1,34 @@
+import { createReadStream } from 'node:fs';
+import { basename, isAbsolute } from 'node:path';
+
+function validateNonEmptyString(value, name) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(`${name} is required and must be a non-empty string`);
+  }
+}
+
+async function uploadFileToWorkspace(client, slug, filePath, folderName) {
+  validateNonEmptyString(slug, 'slug');
+  validateNonEmptyString(filePath, 'filePath');
+  if (!isAbsolute(filePath)) {
+    throw new Error('filePath must be an absolute path');
+  }
+  if (filePath.split(/[\\/]/).includes('..')) {
+    throw new Error('filePath must not contain parent directory references');
+  }
+
+  let fileStream;
+  try {
+    fileStream = createReadStream(filePath);
+    return await client.uploadDocument(slug, {
+      file: fileStream,
+      filename: basename(filePath)
+    }, folderName);
+  } finally {
+    fileStream?.destroy();
+  }
+}
+
 export async function handleAdditionalTools(name, args, client) {
   let result;
   
@@ -94,6 +125,15 @@ export async function handleAdditionalTools(name, args, client) {
     // Document Processing
     case 'process_document_url':
       result = await client.processDocument(args.slug, args.url);
+      break;
+
+    case 'upload_file':
+      result = await uploadFileToWorkspace(client, args.slug, args.filePath);
+      break;
+
+    case 'upload_file_to_folder':
+      validateNonEmptyString(args.folderName, 'folderName');
+      result = await uploadFileToWorkspace(client, args.slug, args.filePath, args.folderName);
       break;
       
     case 'get_document_vectors':

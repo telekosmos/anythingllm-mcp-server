@@ -89,6 +89,8 @@ mcp__anythingllm__chat_with_workspace
 | `delete_workspace` | Delete workspace | `slug` |
 | `embed_text` | Add text to RAG | `slug`, `texts[]` |
 | `embed_webpage` | Scrape & add webpage | `slug`, `url` |
+| `upload_file` | Upload a local file to RAG | `slug`, `filePath` |
+| `upload_file_to_folder` | Upload a local file to a folder | `slug`, `folderName`, `filePath` |
 | `list_documents` | List docs in workspace | `slug` |
 | `delete_document` | Remove document | `slug`, `documentId` |
 | `chat_with_workspace` | Query RAG / Chat | `slug`, `message`, `mode` |
@@ -158,6 +160,7 @@ These changes protect the server from prompt-injection and malicious tool argume
 
 - **Backend URL is environment-only** — `initialize_anythingllm` no longer accepts a `baseUrl` argument. The server only connects to the URL configured in `ANYTHINGLLM_BASE_URL` at startup, preventing attackers from redirecting API calls (and the API key) to arbitrary servers.
 - **Path parameters are encoded** — All `slug`, `userId`, `documentId`, `keyId`, and `agentId` values are URL-encoded before being inserted into API paths, blocking path-traversal attacks like `slug="../admin/users"`.
+- **File uploads require absolute paths** — `upload_file` and `upload_file_to_folder` require an absolute `filePath` and reject paths containing `..`. Only files the server process can read are accessible; configure filesystem permissions accordingly.
 
 ---
 
