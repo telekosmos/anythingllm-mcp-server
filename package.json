@@ -29,12 +29,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/raqueljezweb/anythingllm-mcp-server.git"
+    "url": "https://github.com/telekosmos/anythingllm-mcp-server.git"
   },
   "bugs": {
-    "url": "https://github.com/raqueljezweb/anythingllm-mcp-server/issues"
+    "url": "https://github.com/telekosmos/anythingllm-mcp-server/issues"
   },
-  "homepage": "https://github.com/raqueljezweb/anythingllm-mcp-server#readme",
+  "homepage": "https://github.com/telekosmos/anythingllm-mcp-server#readme",
   "engines": {
     "node": ">=18.0.0"
   },
