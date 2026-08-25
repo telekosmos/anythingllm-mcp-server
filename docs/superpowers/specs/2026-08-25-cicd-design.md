@@ -56,7 +56,8 @@ publishes under the scoped name **`@telekosmos/anythingllm-mcp-server`** (verifi
   - `name` -> `@telekosmos/anythingllm-mcp-server`.
   - Add `"files": ["src/"]` (ship only runtime code plus README/LICENSE/package.json).
   - Add `"publishConfig": { "access": "public" }` (required for scoped npm packages).
-  - Add `"test": "node --test test/"`.
+  - Add `"test": "node --test"` (bare default discovery; passing a directory arg like
+    `node --test test/` fails on Node 22 and glob-script forms are fragile across versions).
   - `bin` unchanged (`anythingllm-mcp-server`).
 - **`src/index.js`:** add the standard ESM direct-execution guard:
   only call `main()` when the file is launched directly (`import.meta.url ===
