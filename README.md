@@ -179,6 +179,7 @@ npx -y @telekosmos/anythingllm-mcp-server
 # Or install globally:
 npm install -g @telekosmos/anythingllm-mcp-server
 ```
+> Requires Node.js 18+ on the host (the `npx` command ships with npm).
 > Note: the package `anythingllm-mcp-server` on npm is the buggy upstream and is NOT this fixed fork.
 
 ---
@@ -242,9 +243,9 @@ npm install -g @telekosmos/anythingllm-mcp-server
 ## Releasing
 
 Releases are automated via GitHub Actions. Publishing happens when a `v*` tag is pushed, and
-CI runs the test suite first.
+the publish workflow runs the test suite first.
 
-1. Bump the version (creates a commit + `vX.Y.Z` tag):
+1. Ensure the working tree is clean and your git identity is configured, then bump the version (creates a commit + `vX.Y.Z` tag):
    ```bash
    npm version patch   # or minor / major
    ```
