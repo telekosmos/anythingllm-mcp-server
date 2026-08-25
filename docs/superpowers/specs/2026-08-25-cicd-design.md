@@ -44,10 +44,12 @@ publishes under the scoped name **`@telekosmos/anythingllm-mcp-server`** (verifi
   3. `npm ci`.
   4. `npm test`.
   5. **Version guard:** fail if `package.json` version != tag with leading `v` stripped
-     (prevents mismatched or duplicate-version publishes).
+     (prevents mismatched or duplicate-version publishes). Runs before `npm ci` for fast fail.
   6. `npm pack --dry-run`.
-  7. `npm publish` with `NODE_AUTH_TOKEN` = `${{ secrets.NPM_TOKEN }}` via a repo-root
-     `.npmrc` pointing at `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`.
+  7. `npm publish` with `NODE_AUTH_TOKEN` = `${{ secrets.NPM_TOKEN }}`. Authentication is
+     configured via `actions/setup-node` `registry-url: https://registry.npmjs.org` (which
+     writes the per-run token to the runner's npm config) — NOT via a committed repo-root
+     `.npmrc`, which would break local `npm whoami`/`npm publish` in the repo.
 
 ## Repo / tooling changes
 
