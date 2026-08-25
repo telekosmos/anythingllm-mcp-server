@@ -242,17 +242,17 @@ npm install -g @telekosmos/anythingllm-mcp-server
 
 ## Releasing
 
-Releases are automated via GitHub Actions. Publishing happens when a `v*` tag is pushed, and
-the publish workflow runs the test suite first.
+Releases are automated via GitHub Actions. Publishing happens on every push to `main`: the
+publish workflow runs the test suite first, then publishes the package if its version isn't
+already on npm (ordinary commits are skipped automatically).
 
-1. Ensure the working tree is clean and your git identity is configured, then bump the version (creates a commit + `vX.Y.Z` tag):
+1. Ensure the working tree is clean and your git identity is configured, then bump the version:
    ```bash
-   npm version patch   # or minor / major
+   npm version patch   # or minor / major -- also creates a vX.Y.Z git tag
    ```
-2. Push the commit and tag:
+2. Push to main:
    ```bash
    git push origin main
-   git push origin --tags
    ```
 3. GitHub Actions runs tests and publishes `@telekosmos/anythingllm-mcp-server` to npm.
 

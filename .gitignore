@@ -39,5 +39,6 @@ tmp/
 temp/
 
 # Package manager
+.npmrc
 yarn.lock
 pnpm-lock.yaml

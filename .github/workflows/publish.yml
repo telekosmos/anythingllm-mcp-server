@@ -2,8 +2,7 @@ name: Publish to npm
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
 
 concurrency:
   group: npm-publish
@@ -23,25 +22,32 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: npm
 
-      - name: Verify tag matches package version
+      - name: Check version is not already published
+        id: check
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
           VERSION="$(npm pkg get version | tr -d '"')"
-          if [ "$TAG" != "$VERSION" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} mismatch: refusing to publish"
-            exit 1
+          if npm view "@telekosmos/anythingllm-mcp-server@${VERSION}" version >/dev/null 2>&1; then
+            echo "Version ${VERSION} is already published - skipping"
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version ${VERSION} is new - will publish"
+            echo "published=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install dependencies
+        if: steps.check.outputs.published == 'false'
         run: npm ci
 
       - name: Run tests
+        if: steps.check.outputs.published == 'false'
         run: npm test
 
       - name: Build package (verify tarball contents)
+        if: steps.check.outputs.published == 'false'
         run: npm pack --dry-run
 
       - name: Publish to npm
+        if: steps.check.outputs.published == 'false'
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
