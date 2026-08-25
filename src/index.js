@@ -24,11 +24,36 @@ const server = new Server(
   }
 );
 
+function validateBaseUrl(urlString) {
+  try {
+    const url = new URL(urlString);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error('baseUrl must use http or https');
+    }
+    if (url.username || url.password) {
+      throw new Error('baseUrl must not contain credentials');
+    }
+    return urlString.replace(/\/$/, '');
+  } catch (error) {
+    throw new Error(`Invalid ANYTHINGLLM_BASE_URL "${urlString}": ${error.message}`);
+  }
+}
+
+const DEFAULT_BASE_URL = 'http://localhost:3001';
+const configuredBaseUrl = validateBaseUrl(process.env.ANYTHINGLLM_BASE_URL || DEFAULT_BASE_URL);
+
 let client = null;
 let config = {
   apiKey: process.env.ANYTHINGLLM_API_KEY || null,
-  baseUrl: process.env.ANYTHINGLLM_BASE_URL || 'http://localhost:3001'
+  baseUrl: configuredBaseUrl
 };
+
+// Auto-initialize if the API key is provided via environment.
+// This lets the server work immediately without requiring the
+// initialize_anythingllm tool call for every new session.
+if (config.apiKey) {
+  client = new AnythingLLMClient(config.baseUrl, config.apiKey);
+}
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
@@ -41,14 +66,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             apiKey: {
               type: 'string',
-              description: 'Your AnythingLLM API key'
-            },
-            baseUrl: {
-              type: 'string',
-              description: 'AnythingLLM base URL (default: http://localhost:3001)'
+              description: 'Your AnythingLLM API key (optional if ANYTHINGLLM_API_KEY env var is set)'
             }
           },
-          required: ['apiKey']
+          required: []
         }
       },
       {
@@ -209,17 +230,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     let result;
     
     switch (name) {
-      case 'initialize_anythingllm':
-        config.apiKey = args.apiKey;
-        if (args.baseUrl) {
-          config.baseUrl = args.baseUrl;
+      case 'initialize_anythingllm': {
+        const apiKey = args.apiKey || config.apiKey;
+        if (!apiKey || typeof apiKey !== 'string') {
+          throw new Error('apiKey is required; set ANYTHINGLLM_API_KEY or pass it to initialize_anythingllm');
         }
+        config.apiKey = apiKey;
         client = new AnythingLLMClient(config.baseUrl, config.apiKey);
         result = { 
           message: 'AnythingLLM client initialized successfully',
           baseUrl: config.baseUrl 
         };
         break;
+      }
         
       case 'list_workspaces':
         if (!client) {
