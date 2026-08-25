@@ -15,13 +15,38 @@ const EXPECTED_TOOLS = [
   'create_workspace',
   'update_workspace',
   'delete_workspace',
-  'embed_text',
-  'embed_webpage',
+  'chat_with_workspace',
   'list_documents',
   'delete_document',
-  'chat_with_workspace',
-  'search_workspace',
+  'get_system_settings',
+  'update_system_settings',
+  'list_users',
+  'create_user',
+  'update_user',
+  'delete_user',
+  'list_api_keys',
+  'create_api_key',
+  'delete_api_key',
+  'embed_text',
+  'embed_webpage',
   'get_chat_history',
+  'clear_chat_history',
+  'get_system_info',
+  'get_system_stats',
+  'list_llm_providers',
+  'update_llm_provider',
+  'get_vector_database_info',
+  'update_vector_database',
+  'get_workspace_settings',
+  'update_workspace_settings',
+  'process_document_url',
+  'get_document_vectors',
+  'search_workspace',
+  'list_agents',
+  'create_agent',
+  'update_agent',
+  'delete_agent',
+  'invoke_agent',
 ];
 
 function startServer() {
@@ -109,6 +134,7 @@ test('server starts over stdio and registers all expected tools', async () => {
     );
 
     const { tools } = await server.request('tools/list');
+    assert.equal(tools.length, EXPECTED_TOOLS.length, 'unexpected number of registered tools');
     const names = new Set(tools.map((tool) => tool.name));
     for (const name of EXPECTED_TOOLS) {
       assert.ok(names.has(name), `missing tool: ${name}`);
