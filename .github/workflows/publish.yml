@@ -20,22 +20,23 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
+          registry-url: https://registry.npmjs.org
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm test
 
       - name: Verify tag matches package version
         run: |
           TAG="${GITHUB_REF_NAME#v}"
           VERSION="$(npm pkg get version | tr -d '"')"
           if [ "$TAG" != "$VERSION" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} v${VERSION} mismatch: refusing to publish"
+            echo "::error::Tag ${GITHUB_REF_NAME} mismatch: refusing to publish"
             exit 1
           fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
 
       - name: Build package (verify tarball contents)
         run: npm pack --dry-run
