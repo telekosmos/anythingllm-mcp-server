@@ -16,8 +16,8 @@ Add this to `~/.claude.json` (or `%USERPROFILE%\.claude.json` on Windows):
   "mcpServers": {
     "anythingllm": {
       "type": "stdio",
-      "command": "node",
-      "args": ["C:/path/to/anythingllm-mcp-server-fork/src/index.js"],
+      "command": "npx",
+      "args": ["-y", "@telekosmos/anythingllm-mcp-server"],
       "env": {
         "ANYTHINGLLM_API_KEY": "YOUR-API-KEY-HERE",
         "ANYTHINGLLM_BASE_URL": "http://localhost:3001"
@@ -170,11 +170,16 @@ cd anythingllm-mcp-server
 npm install
 ```
 
-### Option 2: NPM (Original - HAS BUGS)
+### Option 2: NPM (Fixed fork published here)
 ```bash
-# NOT RECOMMENDED - original package has broken endpoints
-npm install -g anythingllm-mcp-server
+# Recommended for agents: run from anywhere without installing anything.
+# npx fetches and starts the server on demand:
+npx -y @telekosmos/anythingllm-mcp-server
+
+# Or install globally:
+npm install -g @telekosmos/anythingllm-mcp-server
 ```
+> Note: the package `anythingllm-mcp-server` on npm is the buggy upstream and is NOT this fixed fork.
 
 ---
 
@@ -186,8 +191,8 @@ npm install -g anythingllm-mcp-server
   "mcpServers": {
     "anythingllm": {
       "type": "stdio",
-      "command": "node",
-      "args": ["C:/AI/TestVari/anythingllm-mcp-server-fork/src/index.js"],
+      "command": "npx",
+      "args": ["-y", "@telekosmos/anythingllm-mcp-server"],
       "env": {
         "ANYTHINGLLM_API_KEY": "XXXXX-XXXXXX-XXXXXX-XXXXXXX",
         "ANYTHINGLLM_BASE_URL": "http://localhost:3001"
@@ -205,8 +210,8 @@ npm install -g anythingllm-mcp-server
 {
   "mcpServers": {
     "anythingllm": {
-      "command": "node",
-      "args": ["/path/to/anythingllm-mcp-server-fork/src/index.js"],
+      "command": "npx",
+      "args": ["-y", "@telekosmos/anythingllm-mcp-server"],
       "env": {
         "ANYTHINGLLM_API_KEY": "your-key",
         "ANYTHINGLLM_BASE_URL": "http://localhost:3001"
@@ -231,6 +236,27 @@ npm install -g anythingllm-mcp-server
 
 ### Connection refused
 → Ensure AnythingLLM is running on port 3001
+
+---
+
+## Releasing
+
+Releases are automated via GitHub Actions. Publishing happens when a `v*` tag is pushed, and
+CI runs the test suite first.
+
+1. Bump the version (creates a commit + `vX.Y.Z` tag):
+   ```bash
+   npm version patch   # or minor / major
+   ```
+2. Push the commit and tag:
+   ```bash
+   git push origin main
+   git push origin --tags
+   ```
+3. GitHub Actions runs tests and publishes `@telekosmos/anythingllm-mcp-server` to npm.
+
+**Required GitHub secret:** add an npm automation token (publish scope) as `NPM_TOKEN` in
+repo Settings → Secrets and variables → Actions. The publish workflow fails without it.
 
 ---
 
