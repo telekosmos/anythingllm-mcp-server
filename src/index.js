@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { 
@@ -352,7 +354,20 @@ async function main() {
   console.error('AnythingLLM MCP Server started');
 }
 
-main().catch((error) => {
-  console.error('Server error:', error);
-  process.exit(1);
-});
+function isDirectRun() {
+  if (!process.argv[1]) return false;
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isDirectRun()) {
+  main().catch((error) => {
+    console.error('Server error:', error);
+    process.exit(1);
+  });
+}
+
+export { validateBaseUrl };
