@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import FormData from 'form-data';
 
-function safePathSegment(value) {
+export function safePathSegment(value) {
   if (value === undefined || value === null) {
     throw new Error('Path parameter is required');
   }
