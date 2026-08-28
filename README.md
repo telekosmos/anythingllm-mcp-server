@@ -265,7 +265,7 @@ The image reads the same environment variables as the CLI version:
 | `ANYTHINGLLM_API_KEY` | *(unset)* | AnythingLLM API key |
 | `MCP_TRANSPORT` | `stdio` | Transport to serve: `stdio`, `http` (SSE), or `streamable-http` |
 | `MCP_HOST` | `0.0.0.0` | Bind host for `http` and `streamable-http` modes |
-| `MCP_PORT` | `4001` | Listen port for `http` mode |
+| `MCP_PORT` | `4001` | Listen port for `http` and `streamable-http` modes |
 
 ### Run in stdio mode (default)
 

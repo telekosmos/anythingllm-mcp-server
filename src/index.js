@@ -125,8 +125,8 @@ async function startStreamableHttpTransport(config) {
 
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
-        onsessioninitialized: () => {
-          sessions.set(transport.sessionId, transport);
+        onsessioninitialized: (sessionId) => {
+          sessions.set(sessionId, transport);
         },
       });
       transport.onclose = () => {
