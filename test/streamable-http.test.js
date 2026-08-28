@@ -115,3 +115,81 @@ test('supports two concurrent Streamable HTTP sessions', async () => {
     server.close();
   }
 });
+
+test('rejects unknown session ids and non-/mcp paths with 404', async () => {
+  const server = await startServer();
+  try {
+    const res1 = await fetch(`http://127.0.0.1:${server.port}/mcp`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'mcp-session-id': 'does-not-exist',
+      },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }),
+    });
+    assert.equal(res1.status, 404);
+
+    const res2 = await fetch(`http://127.0.0.1:${server.port}/nope`, {
+      method: 'GET',
+    });
+    assert.equal(res2.status, 404);
+  } finally {
+    server.close();
+  }
+});
+
+test('DELETE /mcp terminates the session', async () => {
+  const server = await startServer();
+  const { client, transport } = makeClient(server.port);
+  try {
+    await client.connect(transport);
+    const sessionId = transport.sessionId;
+    assert.ok(sessionId, 'expected a session id after connect');
+
+    const del = await fetch(`http://127.0.0.1:${server.port}/mcp`, {
+      method: 'DELETE',
+      headers: { 'mcp-session-id': sessionId },
+    });
+    assert.ok(del.status === 200 || del.status === 204, `expected 200/204, got ${del.status}`);
+
+    const post = await fetch(`http://127.0.0.1:${server.port}/mcp`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'mcp-session-id': sessionId,
+      },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }),
+    });
+    assert.equal(post.status, 404, 'terminated session id should be rejected');
+  } finally {
+    await client.close();
+    server.close();
+  }
+});
+
+test('session survives client disconnect for reconnection', async () => {
+  const server = await startServer();
+  const { client, transport } = makeClient(server.port);
+  let sessionId;
+  try {
+    await client.connect(transport);
+    sessionId = transport.sessionId;
+    assert.ok(sessionId, 'expected a session id after connect');
+  } finally {
+    await client.close();
+  }
+  // The SDK keeps sessions alive across disconnects so a client can reconnect
+  // with the same session id; only a DELETE terminates the session (see above).
+  const res = await fetch(`http://127.0.0.1:${server.port}/mcp`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'accept': 'application/json, text/event-stream',
+      'mcp-session-id': sessionId,
+    },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }),
+  });
+  assert.equal(res.status, 200, 'session id should remain usable after disconnect');
+  await res.body?.cancel();
+  server.close();
+});
