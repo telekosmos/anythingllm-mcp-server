@@ -1,0 +1,63 @@
+# Multi-container example: AnythingLLM + this MCP server + an MCP client.
+#
+#   anythingllm          - AnythingLLM API server
+#   anythingllm-mcp      - this MCP server (SSE transport over HTTP)
+#   hermes               - the MCP client (fill in your own image/config)
+#
+# The MCP server reaches AnythingLLM over the compose network at
+# http://anythingllm:3001 and exposes its SSE endpoint at
+# http://anythingllm-mcp:4001/sse.
+#
+# Usage:
+#   docker compose -f examples/docker-compose.yml up
+
+services:
+  anythingllm:
+    image: mintplexlabs/anythingllm:latest
+    ports:
+      - "3001:3001"
+    environment:
+      - JWT_SECRET=<generate-a-long-random-secret>
+      - SIG_KEY=<generate-a-long-random-secret>
+      - STORAGE_DIR=/app/server/storage
+    volumes:
+      - anythingllm-data:/app/server/storage
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/ping').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  anythingllm-mcp:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: anythingllm-mcp-server:latest
+    ports:
+      - "4001:4001"
+    environment:
+      - MCP_TRANSPORT=http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=4001
+      - ANYTHINGLLM_BASE_URL=http://anythingllm:3001
+      - ANYTHINGLLM_API_KEY=<your-anythingllm-api-key>
+    depends_on:
+      anythingllm:
+        condition: service_healthy
+
+  hermes:
+    image: <your-hermes-image>
+    environment:
+      # Point the client at the MCP server's SSE endpoint:
+      - MCP_URL=http://anythingllm-mcp:4001/sse
+    depends_on:
+      - anythingllm-mcp
+
+volumes:
+  anythingllm-data:
