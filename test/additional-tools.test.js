@@ -80,6 +80,12 @@ const CASES = [
     expectedArgs: ['ws', 50],
   },
   {
+    name: 'get_chat_history (default limit)',
+    args: { slug: 'ws' },
+    method: 'getWorkspaceChatHistory',
+    expectedArgs: ['ws', 100],
+  },
+  {
     name: 'clear_chat_history',
     args: { slug: 'ws' },
     method: 'clearWorkspaceChatHistory',
@@ -131,6 +137,12 @@ const CASES = [
     method: 'searchWorkspace',
     expectedArgs: ['ws', 'q', 5],
   },
+  {
+    name: 'search_workspace (default limit)',
+    args: { slug: 'ws', query: 'q' },
+    method: 'searchWorkspace',
+    expectedArgs: ['ws', 'q', 10],
+  },
   { name: 'list_agents', args: {}, method: 'listAgents', expectedArgs: [] },
   {
     name: 'create_agent',
@@ -154,6 +166,8 @@ const CASES = [
 ];
 
 test('handleAdditionalTools maps each tool to the correct client method', async (t) => {
+  const distinctTools = new Set(CASES.map((c) => c.name.split(' ')[0]));
+  assert.equal(distinctTools.size, 27, `expected 27 distinct additional tools, got ${distinctTools.size}`);
   for (const c of CASES) {
     await t.test(c.name, async () => {
       const { client, calls } = makeMockClient();
