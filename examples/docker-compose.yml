@@ -8,6 +8,13 @@
 # http://anythingllm:3001 and exposes its SSE endpoint at
 # http://anythingllm-mcp:4001/sse.
 #
+# Replace every <placeholder> below with a real value before starting:
+#   - Generate JWT_SECRET and SIG_KEY with: openssl rand -hex 32
+#   - ANYTHINGLLM_API_KEY is not something the environment provides. Enable
+#     the Developer API in the AnythingLLM UI (Settings -> API Keys), generate
+#     a key, and paste it in place of <your-anythingllm-api-key>. Without it
+#     every MCP tool call returns a 401 even though the stack looks healthy.
+#
 # Usage:
 #   docker compose -f examples/docker-compose.yml up
 
@@ -30,6 +37,7 @@ services:
           "-e",
           "fetch('http://127.0.0.1:3001/api/ping').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
+      start_period: 60s
       interval: 10s
       timeout: 5s
       retries: 5
