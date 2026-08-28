@@ -14,7 +14,7 @@
     "start": "node src/index.js",
     "test": "node --test",
     "docker:build": "docker build -t anythingllm-mcp-server:$(node -p \"require('./package.json').version\") -t anythingllm-mcp-server:latest .",
-    "docker:run": "docker run --rm -p 4001:4001 -e MCP_TRANSPORT=http -e MCP_HOST=0.0.0.0 -e MCP_PORT=4001 -e ANYTHINGLLM_BASE_URL=http://localhost:3001 -e ANYTHINGLLM_API_KEY=$ANYTHINGLLM_API_KEY anythingllm-mcp-server:latest",
+    "docker:run": "docker run --rm -p 4001:4001 -e MCP_TRANSPORT=http -e MCP_HOST=0.0.0.0 -e MCP_PORT=4001 -e ANYTHINGLLM_BASE_URL=${ANYTHINGLLM_BASE_URL:-http://localhost:3001} -e ANYTHINGLLM_API_KEY=$ANYTHINGLLM_API_KEY anythingllm-mcp-server:latest",
     "release": "./scripts/publish.sh",
     "release:quick": "./scripts/quick-publish.sh"
   },
