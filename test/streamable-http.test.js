@@ -172,15 +172,15 @@ test('session survives client disconnect for reconnection', async () => {
   const { client, transport } = makeClient(server.port);
   let sessionId;
   try {
-    await client.connect(transport);
-    sessionId = transport.sessionId;
-    assert.ok(sessionId, 'expected a session id after connect');
-  } finally {
-    await client.close();
-  }
-  // The SDK keeps sessions alive across disconnects so a client can reconnect
-  // with the same session id; only a DELETE terminates the session (see above).
-  try {
+    try {
+      await client.connect(transport);
+      sessionId = transport.sessionId;
+      assert.ok(sessionId, 'expected a session id after connect');
+    } finally {
+      await client.close();
+    }
+    // The SDK keeps sessions alive across disconnects so a client can reconnect
+    // with the same session id; only a DELETE terminates the session (see above).
     const res = await fetch(`http://127.0.0.1:${server.port}/mcp`, {
       method: 'POST',
       headers: {
