@@ -77,23 +77,75 @@ mcp__anythingllm__chat_with_workspace
   mode: "query"   # Use "query" for RAG, "chat" for conversation
 ```
 
-### All Available Tools
+### All Available Tools (38)
+
+The server registers **38 tools**: the workspace/RAG tools below plus the
+admin/management tools grouped underneath. Tools marked 🔐 manage credentials,
+users, or system configuration — only expose the server to clients you trust if
+you want those callable.
+
+#### Workspaces
 
 | Tool | Purpose | Key Parameters |
 |------|---------|----------------|
-| `initialize_anythingllm` | **REQUIRED FIRST** | `apiKey` |
+| `initialize_anythingllm` | **REQUIRED FIRST** — initialize the client | `apiKey` |
 | `list_workspaces` | List all workspaces | - |
 | `get_workspace` | Get workspace details + documents | `slug` |
 | `create_workspace` | Create new workspace | `name` |
 | `update_workspace` | Update workspace settings | `slug`, `updates` |
 | `delete_workspace` | Delete workspace | `slug` |
+| `get_workspace_settings` | Get settings for a workspace | `slug` |
+| `update_workspace_settings` | Update settings for a workspace | `slug`, `settings` |
+
+#### Documents & RAG
+
+| Tool | Purpose | Key Parameters |
+|------|---------|----------------|
 | `embed_text` | Add text to RAG | `slug`, `texts[]` |
 | `embed_webpage` | Scrape & add webpage | `slug`, `url` |
 | `list_documents` | List docs in workspace | `slug` |
 | `delete_document` | Remove document | `slug`, `documentId` |
+| `process_document_url` | Process a document from a URL | `slug`, `url` |
+| `get_document_vectors` | Get vector embeddings for a document | `slug`, `documentId` |
+
+#### Chat & Search
+
+| Tool | Purpose | Key Parameters |
+|------|---------|----------------|
 | `chat_with_workspace` | Query RAG / Chat | `slug`, `message`, `mode` |
-| `search_workspace` | Vector similarity search | `slug`, `query` |
-| `get_chat_history` | Get conversation history | `slug` |
+| `search_workspace` | Vector similarity search | `slug`, `query`, `limit` |
+| `get_chat_history` | Get conversation history | `slug`, `limit` |
+| `clear_chat_history` | Clear all chat history for a workspace | `slug` |
+
+#### Agents
+
+| Tool | Purpose | Key Parameters |
+|------|---------|----------------|
+| `list_agents` | List all agents | - |
+| `create_agent` | Create an agent | `name`, `systemPrompt`, `tools[]` |
+| `update_agent` | Update an agent | `agentId`, `updates` |
+| `delete_agent` | Delete an agent | `agentId` |
+| `invoke_agent` | Invoke an agent with input | `agentId`, `input` |
+
+#### 🔐 System & Admin
+
+| Tool | Purpose | Key Parameters |
+|------|---------|----------------|
+| `get_system_settings` | Get system settings | - |
+| `update_system_settings` | Update system settings | `settings` |
+| `get_system_info` | Get general system information | - |
+| `get_system_stats` | Get system statistics | - |
+| `list_users` | List all users | - |
+| `create_user` | Create a new user | `username`, `password`, `role` |
+| `update_user` | Update an existing user | `userId`, `updates` |
+| `delete_user` | Delete a user | `userId` |
+| `list_api_keys` | List all API keys | - |
+| `create_api_key` | Create a new API key | `name` |
+| `delete_api_key` | Delete an API key | `keyId` |
+| `list_llm_providers` | List available LLM providers | - |
+| `update_llm_provider` | Update LLM provider config (incl. provider API key) | `provider`, `apiKey`, `model` |
+| `get_vector_database_info` | Get vector database config | - |
+| `update_vector_database` | Update vector database config | `provider`, `config` |
 
 ### Common Patterns
 
