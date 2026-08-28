@@ -244,9 +244,9 @@ docker-compose stack (AnythingLLM + this MCP server + an MCP client). See the
 
 ## Docker
 
-The server ships as a multi-stage `node:22-alpine` image that supports both
-transports (stdio and HTTP/SSE). Build it, run it standalone, or use the
-provided docker-compose example for a multi-container stack.
+The server ships as a multi-stage `node:22-alpine` image that supports three
+transports (stdio, HTTP/SSE, and Streamable HTTP). Build it, run it standalone,
+or use the provided docker-compose example for a multi-container stack.
 
 ### Build the image
 
@@ -263,8 +263,8 @@ The image reads the same environment variables as the CLI version:
 |----------|---------|-------------|
 | `ANYTHINGLLM_BASE_URL` | `http://localhost:3001` | AnythingLLM API base URL |
 | `ANYTHINGLLM_API_KEY` | *(unset)* | AnythingLLM API key |
-| `MCP_TRANSPORT` | `stdio` | Transport to serve: `stdio` or `http` (SSE) |
-| `MCP_HOST` | `0.0.0.0` | Bind host for `http` mode |
+| `MCP_TRANSPORT` | `stdio` | Transport to serve: `stdio`, `http` (SSE), or `streamable-http` |
+| `MCP_HOST` | `0.0.0.0` | Bind host for `http` and `streamable-http` modes |
 | `MCP_PORT` | `4001` | Listen port for `http` mode |
 
 ### Run in stdio mode (default)
@@ -301,6 +301,35 @@ npm run docker:run
 > **Note:** from inside a container, `localhost` is the container itself. To
 > reach an AnythingLLM instance running on your host, use `host.docker.internal`
 > on macOS/Windows, e.g. `ANYTHINGLLM_BASE_URL=http://host.docker.internal:3001`.
+
+### Run in Streamable HTTP mode
+
+The modern MCP transport standard (Streamable HTTP) is available as
+`MCP_TRANSPORT=streamable-http`. It exposes a single endpoint
+`http://<host>:4001/mcp` and manages sessions via the `mcp-session-id` header:
+
+```bash
+docker run --rm -p 4001:4001 \
+  -e MCP_TRANSPORT=streamable-http \
+  -e ANYTHINGLLM_BASE_URL=http://localhost:3001 \
+  -e ANYTHINGLLM_API_KEY=your-key \
+  anythingllm-mcp-server:latest
+```
+
+Point an MCP client that supports Streamable HTTP at the `/mcp` endpoint:
+
+```json
+{
+  "mcpServers": {
+    "anythingllm": {
+      "type": "http",
+      "url": "http://localhost:4001/mcp"
+    }
+  }
+}
+```
+
+The SSE transport (`MCP_TRANSPORT=http`) remains available and unchanged.
 
 ### docker-compose
 
