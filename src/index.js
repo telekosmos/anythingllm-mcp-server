@@ -3,9 +3,11 @@
 import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { createServer } from 'node:http';
+import { randomUUID } from 'node:crypto';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { 
   CallToolRequestSchema, 
   ListToolsRequestSchema 
@@ -96,6 +98,57 @@ async function startHttpTransport(config) {
   });
   console.error(
     `AnythingLLM MCP Server (SSE) listening on http://${config.host}:${config.port}/sse`
+  );
+}
+
+async function startStreamableHttpTransport(config) {
+  const sessions = new Map();
+
+  const httpServer = createServer(async (req, res) => {
+    try {
+      const url = new URL(req.url, 'http://localhost');
+      if (url.pathname !== '/mcp') {
+        res.writeHead(404).end('Not found');
+        return;
+      }
+
+      const sessionId = req.headers['mcp-session-id'];
+      if (sessionId) {
+        const transport = sessions.get(sessionId);
+        if (!transport) {
+          res.writeHead(404).end('Unknown session');
+          return;
+        }
+        await transport.handleRequest(req, res);
+        return;
+      }
+
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: () => {
+          sessions.set(transport.sessionId, transport);
+        },
+      });
+      transport.onclose = () => {
+        sessions.delete(transport.sessionId);
+      };
+      const mcpServer = createMcpServer();
+      await mcpServer.connect(transport);
+      await transport.handleRequest(req, res);
+    } catch (error) {
+      console.error('HTTP transport error:', error);
+      if (!res.headersSent) {
+        res.writeHead(500).end(String(error.message || error));
+      }
+    }
+  });
+
+  await new Promise((resolve, reject) => {
+    httpServer.once('error', reject);
+    httpServer.listen(config.port, config.host, resolve);
+  });
+  console.error(
+    `AnythingLLM MCP Server (Streamable HTTP) listening on http://${config.host}:${config.port}/mcp`
   );
 }
 
@@ -427,6 +480,8 @@ async function main() {
   const transportConfig = resolveTransportConfig(process.env);
   if (transportConfig.mode === 'http') {
     await startHttpTransport(transportConfig);
+  } else if (transportConfig.mode === 'streamable-http') {
+    await startStreamableHttpTransport(transportConfig);
   } else {
     const server = createMcpServer();
     const transport = new StdioServerTransport();
