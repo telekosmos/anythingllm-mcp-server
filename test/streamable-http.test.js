@@ -180,16 +180,19 @@ test('session survives client disconnect for reconnection', async () => {
   }
   // The SDK keeps sessions alive across disconnects so a client can reconnect
   // with the same session id; only a DELETE terminates the session (see above).
-  const res = await fetch(`http://127.0.0.1:${server.port}/mcp`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'accept': 'application/json, text/event-stream',
-      'mcp-session-id': sessionId,
-    },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }),
-  });
-  assert.equal(res.status, 200, 'session id should remain usable after disconnect');
-  await res.body?.cancel();
-  server.close();
+  try {
+    const res = await fetch(`http://127.0.0.1:${server.port}/mcp`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'accept': 'application/json, text/event-stream',
+        'mcp-session-id': sessionId,
+      },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }),
+    });
+    assert.equal(res.status, 200, 'session id should remain usable after disconnect');
+    await res.body?.cancel();
+  } finally {
+    server.close();
+  }
 });
