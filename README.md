@@ -182,6 +182,102 @@ npm install -g @telekosmos/anythingllm-mcp-server
 > Requires Node.js 18+ on the host (the `npx` command ships with npm).
 > Note: the package `anythingllm-mcp-server` on npm is the buggy upstream and is NOT this fixed fork.
 
+### Option 3: Docker (recommended for multi-container setups)
+
+Build and run the server as a container, either standalone or as part of a
+docker-compose stack (AnythingLLM + this MCP server + an MCP client). See the
+[Docker](#docker) section below.
+
+---
+
+## Docker
+
+The server ships as a multi-stage `node:22-alpine` image that supports both
+transports (stdio and HTTP/SSE). Build it, run it standalone, or use the
+provided docker-compose example for a multi-container stack.
+
+### Build the image
+
+```bash
+npm run docker:build
+# tags the image as anythingllm-mcp-server:<version> and anythingllm-mcp-server:latest
+```
+
+### Environment variables
+
+The image reads the same environment variables as the CLI version:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ANYTHINGLLM_BASE_URL` | `http://localhost:3001` | AnythingLLM API base URL |
+| `ANYTHINGLLM_API_KEY` | *(unset)* | AnythingLLM API key |
+| `MCP_TRANSPORT` | `stdio` | Transport to serve: `stdio` or `http` (SSE) |
+| `MCP_HOST` | `0.0.0.0` | Bind host for `http` mode |
+| `MCP_PORT` | `4001` | Listen port for `http` mode |
+
+### Run in stdio mode (default)
+
+For clients that launch the server as a subprocess (`docker run -i`):
+
+```bash
+docker run --rm -i \
+  -e ANYTHINGLLM_API_KEY=your-key \
+  -e ANYTHINGLLM_BASE_URL=http://localhost:3001 \
+  anythingllm-mcp-server:latest
+```
+
+### Run in HTTP/SSE mode
+
+Expose the server over the network for other containers or remote clients:
+
+```bash
+docker run --rm -p 4001:4001 \
+  -e MCP_TRANSPORT=http \
+  -e ANYTHINGLLM_BASE_URL=http://localhost:3001 \
+  -e ANYTHINGLLM_API_KEY=your-key \
+  anythingllm-mcp-server:latest
+```
+
+The SSE endpoint is `http://<host>:4001/sse`; clients POST messages to
+`/messages?sessionId=...`. Or use the convenience script, which forwards
+`ANYTHINGLLM_BASE_URL` and `ANYTHINGLLM_API_KEY` from your shell:
+
+```bash
+npm run docker:run
+```
+
+> **Note:** from inside a container, `localhost` is the container itself. To
+> reach an AnythingLLM instance running on your host, use `host.docker.internal`
+> on macOS/Windows, e.g. `ANYTHINGLLM_BASE_URL=http://host.docker.internal:3001`.
+
+### docker-compose
+
+See [`examples/docker-compose.yml`](examples/docker-compose.yml) for a complete
+stack: AnythingLLM, this MCP server in SSE mode, and an MCP client (Hermes). It
+shows the network wiring (`ANYTHINGLLM_BASE_URL=http://anythingllm:3001`, SSE at
+`http://anythingllm-mcp:4001/sse`) and the secrets/placeholders you must replace
+before starting:
+
+```bash
+docker compose -f examples/docker-compose.yml up
+```
+
+### Point an SSE-capable MCP client at the container
+
+For a client that supports remote SSE servers, run the container with
+`MCP_TRANSPORT=http` (port 4001 published) and configure:
+
+```json
+{
+  "mcpServers": {
+    "anythingllm": {
+      "type": "sse",
+      "url": "http://localhost:4001/sse"
+    }
+  }
+}
+```
+
 ---
 
 ## Configuration Examples
