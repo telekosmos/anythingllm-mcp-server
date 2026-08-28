@@ -42,9 +42,8 @@ function waitForServer(port, attempts = 40) {
   });
 }
 
-test('server starts over SSE and registers all expected tools', async () => {
-  const port = await getFreePort();
-  const child = spawn(process.execPath, [SERVER_PATH], {
+function startSseServer(port) {
+  return spawn(process.execPath, [SERVER_PATH], {
     cwd: ROOT,
     env: {
       ...process.env,
@@ -56,9 +55,19 @@ test('server starts over SSE and registers all expected tools', async () => {
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
+}
 
+function makeClient(port) {
   const client = new Client({ name: 'sse-test', version: '1.0.0' });
   const transport = new SSEClientTransport(new URL(`http://127.0.0.1:${port}/sse`));
+  return { client, transport };
+}
+
+test('server starts over SSE and registers all expected tools', async () => {
+  const port = await getFreePort();
+  const child = startSseServer(port);
+
+  const { client, transport } = makeClient(port);
 
   try {
     await waitForServer(port);
@@ -68,6 +77,30 @@ test('server starts over SSE and registers all expected tools', async () => {
     assert.ok(tools.some((tool) => tool.name === 'create_workspace'), 'expected create_workspace');
   } finally {
     await client.close();
+    child.kill();
+  }
+});
+
+test('server supports two concurrent SSE sessions', async () => {
+  const port = await getFreePort();
+  const child = startSseServer(port);
+
+  const { client: clientA, transport: transportA } = makeClient(port);
+  const { client: clientB, transport: transportB } = makeClient(port);
+
+  try {
+    await waitForServer(port);
+    await Promise.all([clientA.connect(transportA), clientB.connect(transportB)]);
+    const [resultA, resultB] = await Promise.all([clientA.listTools(), clientB.listTools()]);
+    for (const result of [resultA, resultB]) {
+      assert.ok(result.tools.length > 0, 'expected tools to be registered');
+      assert.ok(
+        result.tools.some((tool) => tool.name === 'create_workspace'),
+        'expected create_workspace'
+      );
+    }
+    await Promise.all([clientA.close(), clientB.close()]);
+  } finally {
     child.kill();
   }
 });
