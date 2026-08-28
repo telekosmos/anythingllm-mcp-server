@@ -41,6 +41,23 @@ function validateBaseUrl(urlString) {
   }
 }
 
+const DEFAULT_MCP_HOST = '0.0.0.0';
+const DEFAULT_MCP_PORT = 4001;
+
+function resolveTransportConfig(env) {
+  const mode = env.MCP_TRANSPORT || 'stdio';
+  if (mode !== 'stdio' && mode !== 'http') {
+    throw new Error(`Invalid MCP_TRANSPORT "${mode}": expected "stdio" or "http"`);
+  }
+  const host = env.MCP_HOST || DEFAULT_MCP_HOST;
+  const rawPort = env.MCP_PORT || DEFAULT_MCP_PORT;
+  const port = Number(rawPort);
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error(`Invalid MCP_PORT "${rawPort}": expected a port number between 1 and 65535`);
+  }
+  return { mode, host, port };
+}
+
 const DEFAULT_BASE_URL = 'http://localhost:3001';
 const configuredBaseUrl = validateBaseUrl(process.env.ANYTHINGLLM_BASE_URL || DEFAULT_BASE_URL);
 
@@ -370,4 +387,4 @@ if (isDirectRun()) {
   });
 }
 
-export { validateBaseUrl };
+export { validateBaseUrl, resolveTransportConfig };
