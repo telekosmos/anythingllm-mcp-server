@@ -37,3 +37,11 @@ test('resolveTransportConfig throws on invalid port', () => {
   assert.throws(() => resolveTransportConfig({ MCP_PORT: 'not-a-port' }), /Invalid MCP_PORT/);
   assert.throws(() => resolveTransportConfig({ MCP_PORT: '70000' }), /Invalid MCP_PORT/);
 });
+
+test('resolveTransportConfig honors streamable-http mode', () => {
+  assert.deepEqual(resolveTransportConfig({ MCP_TRANSPORT: 'streamable-http' }), {
+    mode: 'streamable-http',
+    host: '0.0.0.0',
+    port: 4001,
+  });
+});

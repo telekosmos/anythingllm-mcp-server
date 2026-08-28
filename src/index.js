@@ -34,8 +34,8 @@ const DEFAULT_MCP_PORT = 4001;
 
 function resolveTransportConfig(env) {
   const mode = env.MCP_TRANSPORT || 'stdio';
-  if (mode !== 'stdio' && mode !== 'http') {
-    throw new Error(`Invalid MCP_TRANSPORT "${mode}": expected "stdio" or "http"`);
+  if (mode !== 'stdio' && mode !== 'http' && mode !== 'streamable-http') {
+    throw new Error(`Invalid MCP_TRANSPORT "${mode}": expected "stdio", "http", or "streamable-http"`);
   }
   const host = env.MCP_HOST || DEFAULT_MCP_HOST;
   const rawPort = env.MCP_PORT || DEFAULT_MCP_PORT;
