@@ -239,8 +239,14 @@ import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 
 3. Insert a new `startHttpTransport` function after `resolveTransportConfig` (i.e. after the block added in Task 1):
 
+> **Note (post-review correction):** each SSE session gets its own `Server`
+> instance. The SDK's `Protocol.connect` throws if a single server is connected
+> to a second transport (`'...use a separate Protocol instance per connection.'`),
+> so server construction + both `setRequestHandler` registrations live in a
+> `createMcpServer()` factory (see step 3b), and `GET /sse` calls it per connection.
+
 ```js
-async function startHttpTransport(config, mcpServer) {
+async function startHttpTransport(config) {
   const sessions = new Map();
 
   const httpServer = createServer(async (req, res) => {
@@ -248,23 +254,30 @@ async function startHttpTransport(config, mcpServer) {
       const url = new URL(req.url, 'http://localhost');
 
       if (req.method === 'GET' && url.pathname === '/sse') {
+        const server = createMcpServer();
         const transport = new SSEServerTransport('/messages', res);
-        sessions.set(transport.sessionId, transport);
+        const sessionId = transport.sessionId;
+        sessions.set(sessionId, { server, transport });
         transport.onclose = () => {
-          sessions.delete(transport.sessionId);
+          sessions.delete(sessionId);
         };
-        await mcpServer.connect(transport);
+        try {
+          await server.connect(transport);
+        } catch (error) {
+          sessions.delete(sessionId);
+          throw error;
+        }
         return;
       }
 
       if (req.method === 'POST' && url.pathname === '/messages') {
         const sessionId = url.searchParams.get('sessionId');
-        const transport = sessionId && sessions.get(sessionId);
-        if (!transport) {
+        const entry = sessionId && sessions.get(sessionId);
+        if (!entry) {
           res.writeHead(400).end('Unknown session');
           return;
         }
-        await transport.handlePostMessage(req, res);
+        await entry.transport.handlePostMessage(req, res);
         return;
       }
 
@@ -287,14 +300,22 @@ async function startHttpTransport(config, mcpServer) {
 }
 ```
 
+3b. Extract the `Server` construction and both `setRequestHandler` registrations into a `createMcpServer()` factory: change `const server = new Server(` to `function createMcpServer() { const server = new Server(`, move the construction directly above the `ListToolsRequestSchema` handler block, and after the `CallToolRequestSchema` handler's closing `});` add:
+
+```js
+  return server;
+}
+```
+
 4. Replace the `main()` function (lines 351-355) with:
 
 ```js
 async function main() {
   const transportConfig = resolveTransportConfig(process.env);
   if (transportConfig.mode === 'http') {
-    await startHttpTransport(transportConfig, server);
+    await startHttpTransport(transportConfig);
   } else {
+    const server = createMcpServer();
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error('AnythingLLM MCP Server started');

@@ -25,9 +25,11 @@ Non-breaking: stdio remains the default transport.
 - `main()` selects the transport:
   - stdio: existing `StdioServerTransport`.
   - http: Node built-in `http` server:
-    - `GET /sse` → new `SSEServerTransport('/messages', res)`, stored in a
-      `Map<sessionId, transport>`; connects the existing MCP `server`.
-      On close, removes the session from the map.
+    - `GET /sse` → `SSEServerTransport('/messages', res)` stored in a
+      `Map<sessionId, transport>`. Because the SDK allows only one transport
+      per `Server` instance (`Protocol.connect` throws on a second connection),
+      each session gets its own fully-configured `Server` (via a
+      `createMcpServer()` factory). On close, the session is removed from the map.
     - `POST /messages` → route by `?sessionId=` query param; call
       `transport.handlePostMessage(req, res)` (SDK reads the request body).
     - Anything else → 404.
