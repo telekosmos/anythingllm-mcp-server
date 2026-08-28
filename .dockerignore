@@ -2,6 +2,7 @@ node_modules
 .git
 .github
 __IGNORE__
+.serena
 .npmrc
 .env
 .env.*
