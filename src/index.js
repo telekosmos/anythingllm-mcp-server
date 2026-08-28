@@ -2,8 +2,10 @@
 
 import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { createServer } from 'node:http';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { 
   CallToolRequestSchema, 
   ListToolsRequestSchema 
@@ -56,6 +58,52 @@ function resolveTransportConfig(env) {
     throw new Error(`Invalid MCP_PORT "${rawPort}": expected a port number between 1 and 65535`);
   }
   return { mode, host, port };
+}
+
+async function startHttpTransport(config, mcpServer) {
+  const sessions = new Map();
+
+  const httpServer = createServer(async (req, res) => {
+    try {
+      const url = new URL(req.url, 'http://localhost');
+
+      if (req.method === 'GET' && url.pathname === '/sse') {
+        const transport = new SSEServerTransport('/messages', res);
+        sessions.set(transport.sessionId, transport);
+        transport.onclose = () => {
+          sessions.delete(transport.sessionId);
+        };
+        await mcpServer.connect(transport);
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/messages') {
+        const sessionId = url.searchParams.get('sessionId');
+        const transport = sessionId && sessions.get(sessionId);
+        if (!transport) {
+          res.writeHead(400).end('Unknown session');
+          return;
+        }
+        await transport.handlePostMessage(req, res);
+        return;
+      }
+
+      res.writeHead(404).end('Not found');
+    } catch (error) {
+      console.error('HTTP transport error:', error);
+      if (!res.headersSent) {
+        res.writeHead(500).end(String(error.message || error));
+      }
+    }
+  });
+
+  await new Promise((resolve, reject) => {
+    httpServer.once('error', reject);
+    httpServer.listen(config.port, config.host, resolve);
+  });
+  console.error(
+    `AnythingLLM MCP Server (SSE) listening on http://${config.host}:${config.port}/sse`
+  );
 }
 
 const DEFAULT_BASE_URL = 'http://localhost:3001';
@@ -366,9 +414,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error('AnythingLLM MCP Server started');
+  const transportConfig = resolveTransportConfig(process.env);
+  if (transportConfig.mode === 'http') {
+    await startHttpTransport(transportConfig, server);
+  } else {
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error('AnythingLLM MCP Server started');
+  }
 }
 
 function isDirectRun() {
