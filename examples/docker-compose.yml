@@ -8,6 +8,9 @@
 # http://anythingllm:3001 and exposes its SSE endpoint at
 # http://anythingllm-mcp:4001/sse.
 #
+#   Streamable HTTP alternative: set MCP_TRANSPORT=streamable-http and point the
+#   client at http://anythingllm-mcp:4001/mcp instead of /sse.
+#
 # Replace every <placeholder> below with a real value before starting:
 #   - Generate JWT_SECRET and SIG_KEY with: openssl rand -hex 32
 #   - ANYTHINGLLM_API_KEY is not something the environment provides. Enable
@@ -18,11 +21,13 @@
 # Usage:
 #   docker compose -f examples/docker-compose.yml up
 
+name: anythingllm-mcp-server-test
+
 services:
   anythingllm:
     image: mintplexlabs/anythingllm:latest
     ports:
-      - "3001:3001"
+      - "30011:3001"
     environment:
       - JWT_SECRET=<generate-a-long-random-secret>
       - SIG_KEY=<generate-a-long-random-secret>
