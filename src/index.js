@@ -3,7 +3,14 @@
 import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { createServer } from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, webcrypto } from 'node:crypto';
+
+// Node 18 does not expose the WebCrypto `crypto` global (added in Node 19).
+// The MCP SDK's Streamable HTTP transport references it (crypto.randomUUID),
+// so polyfill it before the SDK handles any request.
+if (!globalThis.crypto) {
+  globalThis.crypto = webcrypto;
+}
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
