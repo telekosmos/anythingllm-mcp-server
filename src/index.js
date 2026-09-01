@@ -3,9 +3,18 @@
 import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { createServer } from 'node:http';
+import { randomUUID, webcrypto } from 'node:crypto';
+
+// Node 18 does not expose the WebCrypto `crypto` global (added in Node 19).
+// The MCP SDK's Streamable HTTP transport references it (crypto.randomUUID),
+// so polyfill it before the SDK handles any request.
+if (!globalThis.crypto) {
+  globalThis.crypto = webcrypto;
+}
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { 
   CallToolRequestSchema, 
   ListToolsRequestSchema 
@@ -34,8 +43,8 @@ const DEFAULT_MCP_PORT = 4001;
 
 function resolveTransportConfig(env) {
   const mode = env.MCP_TRANSPORT || 'stdio';
-  if (mode !== 'stdio' && mode !== 'http') {
-    throw new Error(`Invalid MCP_TRANSPORT "${mode}": expected "stdio" or "http"`);
+  if (mode !== 'stdio' && mode !== 'http' && mode !== 'streamable-http') {
+    throw new Error(`Invalid MCP_TRANSPORT "${mode}": expected "stdio", "http", or "streamable-http"`);
   }
   const host = env.MCP_HOST || DEFAULT_MCP_HOST;
   const rawPort = env.MCP_PORT || DEFAULT_MCP_PORT;
@@ -96,6 +105,57 @@ async function startHttpTransport(config) {
   });
   console.error(
     `AnythingLLM MCP Server (SSE) listening on http://${config.host}:${config.port}/sse`
+  );
+}
+
+async function startStreamableHttpTransport(config) {
+  const sessions = new Map();
+
+  const httpServer = createServer(async (req, res) => {
+    try {
+      const url = new URL(req.url, 'http://localhost');
+      if (url.pathname !== '/mcp') {
+        res.writeHead(404).end('Not found');
+        return;
+      }
+
+      const sessionId = req.headers['mcp-session-id'];
+      if (sessionId) {
+        const transport = sessions.get(sessionId);
+        if (!transport) {
+          res.writeHead(404).end('Unknown session');
+          return;
+        }
+        await transport.handleRequest(req, res);
+        return;
+      }
+
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (sessionId) => {
+          sessions.set(sessionId, transport);
+        },
+      });
+      transport.onclose = () => {
+        sessions.delete(transport.sessionId);
+      };
+      const mcpServer = createMcpServer();
+      await mcpServer.connect(transport);
+      await transport.handleRequest(req, res);
+    } catch (error) {
+      console.error('HTTP transport error:', error);
+      if (!res.headersSent) {
+        res.writeHead(500).end(String(error.message || error));
+      }
+    }
+  });
+
+  await new Promise((resolve, reject) => {
+    httpServer.once('error', reject);
+    httpServer.listen(config.port, config.host, resolve);
+  });
+  console.error(
+    `AnythingLLM MCP Server (Streamable HTTP) listening on http://${config.host}:${config.port}/mcp`
   );
 }
 
@@ -427,6 +487,8 @@ async function main() {
   const transportConfig = resolveTransportConfig(process.env);
   if (transportConfig.mode === 'http') {
     await startHttpTransport(transportConfig);
+  } else if (transportConfig.mode === 'streamable-http') {
+    await startStreamableHttpTransport(transportConfig);
   } else {
     const server = createMcpServer();
     const transport = new StdioServerTransport();
