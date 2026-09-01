@@ -42,3 +42,5 @@ temp/
 .npmrc
 yarn.lock
 pnpm-lock.yaml
+
+__IGNORE__
