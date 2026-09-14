@@ -18,6 +18,9 @@
     "release": "./scripts/publish.sh",
     "release:quick": "./scripts/quick-publish.sh"
   },
+  "devDependencies": {
+    "vitest": "^4.1.10"
+  },
   "keywords": [
     "mcp",
     "modelcontextprotocol",
