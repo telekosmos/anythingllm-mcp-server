@@ -40,6 +40,8 @@ tmp/
 temp/
 
 # Package manager
-package-lock.json
+.npmrc
 yarn.lock
 pnpm-lock.yaml
+
+__IGNORE__

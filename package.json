@@ -1,15 +1,20 @@
 {
-  "name": "anythingllm-mcp-server",
-  "version": "2.0.0",
-  "description": "MCP server for AnythingLLM integration with TypingMind and other MCP-compatible clients",
+  "name": "@telekosmos/anythingllm-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for AnythingLLM integration with Hermes and other MCP-compatible clients",
   "main": "src/index.js",
   "type": "module",
+  "files": [
+    "src/"
+  ],
   "bin": {
     "anythingllm-mcp-server": "./src/index.js"
   },
   "scripts": {
     "start": "node src/index.js",
-    "test": "vitest run",
+    "test": "node --test",
+    "docker:build": "docker build -t anythingllm-mcp-server:$(node -p \"require('./package.json').version\") -t anythingllm-mcp-server:latest .",
+    "docker:run": "docker run --rm -p 4001:4001 -e MCP_TRANSPORT=http -e MCP_HOST=0.0.0.0 -e MCP_PORT=4001 -e ANYTHINGLLM_BASE_URL=${ANYTHINGLLM_BASE_URL:-http://localhost:3001} -e ANYTHINGLLM_API_KEY=$ANYTHINGLLM_API_KEY anythingllm-mcp-server:latest",
     "release": "./scripts/publish.sh",
     "release:quick": "./scripts/quick-publish.sh"
   },
@@ -29,12 +34,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/raqueljezweb/anythingllm-mcp-server.git"
+    "url": "https://github.com/telekosmos/anythingllm-mcp-server.git"
   },
   "bugs": {
-    "url": "https://github.com/raqueljezweb/anythingllm-mcp-server/issues"
+    "url": "https://github.com/telekosmos/anythingllm-mcp-server/issues"
   },
-  "homepage": "https://github.com/raqueljezweb/anythingllm-mcp-server#readme",
+  "homepage": "https://github.com/telekosmos/anythingllm-mcp-server#readme",
   "engines": {
     "node": ">=18.0.0"
   },
@@ -42,5 +47,8 @@
     "@modelcontextprotocol/sdk": "^1.0.4",
     "form-data": "^4.0.0",
     "node-fetch": "^3.3.2"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
