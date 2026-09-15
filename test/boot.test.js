@@ -47,6 +47,8 @@ const EXPECTED_TOOLS = [
   'update_agent',
   'delete_agent',
   'invoke_agent',
+  'upload_file',
+  'upload_file_to_folder',
 ];
 
 function startServer() {
