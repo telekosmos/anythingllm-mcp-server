@@ -309,6 +309,46 @@ export const additionalTools = [
     }
   },
   {
+    name: 'upload_file',
+    description: 'Upload a local file to a workspace',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        slug: {
+          type: 'string',
+          description: 'The workspace slug/identifier'
+        },
+        filePath: {
+          type: 'string',
+          description: 'Absolute path to the local file to upload'
+        }
+      },
+      required: ['slug', 'filePath']
+    }
+  },
+  {
+    name: 'upload_file_to_folder',
+    description: 'Upload a local file to a specific folder in a workspace',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        slug: {
+          type: 'string',
+          description: 'The workspace slug/identifier'
+        },
+        folderName: {
+          type: 'string',
+          description: 'Target folder path to upload the file into'
+        },
+        filePath: {
+          type: 'string',
+          description: 'Absolute path to the local file to upload'
+        }
+      },
+      required: ['slug', 'folderName', 'filePath']
+    }
+  },
+  {
     name: 'get_document_vectors',
     description: 'Get vector embeddings for a document',
     inputSchema: {
