@@ -10,7 +10,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const SERVER_PATH = path.join(ROOT, 'src', 'index.js');
-const EXPECTED_TOOL_COUNT = 38;
+const EXPECTED_TOOL_COUNT = 40;
 
 function getFreePort() {
   return new Promise((resolve, reject) => {
@@ -67,7 +67,7 @@ function makeClient(port) {
   };
 }
 
-test('server starts over Streamable HTTP and registers all 38 tools', async () => {
+test('server starts over Streamable HTTP and registers all 40 tools', async () => {
   const server = await startServer();
   const { client, transport } = makeClient(server.port);
   try {

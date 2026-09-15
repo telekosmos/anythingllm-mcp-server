@@ -104,14 +104,20 @@ export class AnythingLLMClient {
 
   // FIXED: Upload document to system documents, then add to workspace
   // AnythingLLM requires a two-step process:
-  // 1. Upload file to /api/v1/document/upload
+  // 1. Upload file to /api/v1/document/upload (or /api/v1/document/upload/{folderName})
   // 2. Add to workspace with /api/v1/workspace/{slug}/update-embeddings
-  async uploadDocument(workspaceSlug, documentData) {
+  //
+  // @param folderName — optional target folder for the upload; encoded as a path segment.
+  async uploadDocument(workspaceSlug, documentData, folderName) {
     const formData = new FormData();
     formData.append('file', documentData.file, documentData.filename || 'document');
 
+    const endpoint = folderName
+      ? `/api/v1/document/upload/${safePathSegment(folderName)}`
+      : '/api/v1/document/upload';
+
     // Step 1: Upload to system documents
-    const uploadResponse = await fetch(`${this.baseUrl}/api/v1/document/upload`, {
+    const uploadResponse = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`
